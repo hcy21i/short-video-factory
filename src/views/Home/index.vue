@@ -9,37 +9,227 @@
       <div class="window-control-bar-no-drag-mask" @mousedown.stop @dblclick.stop></div>
     </div>
 
-    <div class="w-full box-border pt-2 px-3">
-      <TopBar class="window-control-bar-no-drag" />
-    </div>
-
-    <div class="w-full h-0 flex-1 flex box-border gap-2 pt-1 pb-3 px-3">
-      <div class="w-1/3 h-full">
-        <TextGenerate
-          ref="TextGenerateInstance"
-          :disabled="appStore.renderStatus === RenderStatus.GenerateText"
-        />
-      </div>
-      <div class="w-1/3 h-full">
-        <VideoManage
-          ref="VideoManageInstance"
-          :disabled="appStore.renderStatus === RenderStatus.SegmentVideo"
-        />
-      </div>
-      <div class="w-1/3 h-full min-w-0 min-h-0 flex flex-col gap-3">
-        <div class="h-0 flex-1 min-h-0">
-          <TtsControl
-            ref="TtsControlInstance"
-            :disabled="appStore.renderStatus === RenderStatus.SynthesizedSpeech"
-          />
+    <div class="app-shell w-full h-0 flex-1 min-h-0 gap-3 px-3 pb-3 pt-2">
+      <aside class="app-sidebar min-h-0 rounded-2xl border bg-surface">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-mark"><v-icon size="21">mdi-movie-open</v-icon></div>
+          <div class="min-w-0">
+            <div class="truncate text-sm font-semibold">{{ t('features.workspace.brand') }}</div>
+            <div class="truncate text-caption text-medium-emphasis">{{ t('features.workspace.brandHint') }}</div>
+          </div>
         </div>
-        <GenerationOptions class="shrink-0" />
-        <VideoRender
-          class="shrink-0"
-          @render-video="handleRenderVideo"
-          @cancel-render="handleCancelRender"
-        />
-      </div>
+
+        <nav class="sidebar-nav-list" :aria-label="t('features.workspace.navigation')">
+          <section v-for="group in navigationGroups" :key="group.id" class="sidebar-nav-group">
+            <div class="sidebar-section-label">{{ t(group.labelKey) }}</div>
+            <button
+              v-for="item in group.items"
+              :key="item.id"
+              type="button"
+              class="sidebar-nav-item"
+              :class="{ 'sidebar-nav-item-active': activePage === item.id }"
+              :title="t(item.labelKey)"
+              :aria-current="activePage === item.id ? 'page' : undefined"
+              @click="navigateToPage(item.id)"
+            >
+              <span class="sidebar-nav-icon"><v-icon size="19">{{ item.icon }}</v-icon></span>
+              <span class="sidebar-nav-copy">
+                <span class="sidebar-nav-title">{{ t(item.labelKey) }}</span>
+                <span class="sidebar-nav-hint">{{ t(item.hintKey) }}</span>
+              </span>
+              <span v-if="activePage === item.id" class="sidebar-nav-indicator" aria-hidden="true"></span>
+            </button>
+          </section>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-agent-card">
+            <span class="agent-status-dot" :class="{ 'agent-status-dot-busy': agentWorkflowBusy }"></span>
+            <div class="min-w-0">
+              <div class="sidebar-agent-title">{{ t('features.workspace.agentStatus') }}</div>
+              <div class="sidebar-agent-state">
+                {{ agentWorkflowBusy ? t('features.workspace.agentRunning') : t('features.workspace.agentReady') }}
+              </div>
+            </div>
+          </div>
+          <div class="sidebar-footer-note">{{ t('features.workspace.agentHint') }}</div>
+        </div>
+      </aside>
+
+      <main class="app-page-area min-w-0 min-h-0">
+        <header class="page-header">
+          <div class="min-w-0">
+            <div class="page-eyebrow">{{ t('features.workspace.studioLabel') }}</div>
+            <h1 class="page-title">{{ t(activePageTitleKey) }}</h1>
+            <p class="page-description">{{ t(activePageDescriptionKey) }}</p>
+          </div>
+          <div class="page-header-actions">
+            <v-chip v-if="activePage === 'workbench'" class="page-context-chip" prepend-icon="mdi-cellphone-link" variant="tonal">
+              {{ platformName }} · {{ appStore.agentTargetDurationSeconds }}s
+            </v-chip>
+            <v-btn
+              v-if="agentWorkflowBusy"
+              color="primary"
+              variant="tonal"
+              prepend-icon="mdi-progress-clock"
+              @click="navigateToPage('export')"
+            >
+              {{ t('features.workspace.viewProgress') }}
+            </v-btn>
+          </div>
+        </header>
+
+        <section v-show="activePage === 'workbench'" class="page-view workbench-view">
+          <div class="workbench-main">
+            <TextGenerate
+              ref="TextGenerateInstance"
+              :disabled="agentWorkflowBusy"
+              @open-model-settings="openCopywritingSettings"
+              @history-updated="refreshModelHistory"
+            />
+          </div>
+
+          <aside class="studio-inspector">
+            <v-sheet class="inspector-card workflow-card" border rounded>
+              <div class="inspector-card-heading">
+                <div>
+                  <div class="inspector-title">{{ t('features.workspace.workflowTitle') }}</div>
+                  <div class="inspector-caption">{{ t('features.workspace.workflowHint') }}</div>
+                </div>
+                <v-chip size="small" :color="agentWorkflowBusy ? 'primary' : 'default'" variant="tonal">
+                  {{ workflowStatusLabel }}
+                </v-chip>
+              </div>
+              <div class="workflow-step-list">
+                <button
+                  v-for="(step, index) in workflowSteps"
+                  :key="step.id"
+                  type="button"
+                  class="workflow-step"
+                  :class="workflowStepClass(index)"
+                  @click="navigateToPage(step.page)"
+                >
+                  <span class="workflow-step-marker">
+                    <v-icon size="15">{{ workflowStepIcon(index) }}</v-icon>
+                  </span>
+                  <span class="workflow-step-copy">
+                    <span class="workflow-step-title">{{ t(step.labelKey) }}</span>
+                    <span class="workflow-step-hint">{{ t(step.hintKey) }}</span>
+                  </span>
+                  <v-icon class="workflow-step-arrow" size="17">mdi-chevron-right</v-icon>
+                </button>
+              </div>
+            </v-sheet>
+
+            <v-sheet class="inspector-card voice-summary" border rounded>
+              <div class="voice-summary-icon"><v-icon size="20">mdi-waveform</v-icon></div>
+              <div class="min-w-0 flex-1">
+                <div class="inspector-title">{{ t('features.workspace.voiceSummaryTitle') }}</div>
+                <div class="voice-summary-name">
+                  {{ t(appStore.ttsProvider === 'minimax' ? 'features.tts.config.providerMiniMax' : 'features.tts.config.providerEdge') }}
+                  <span v-if="currentVoiceName"> · {{ currentVoiceName }}</span>
+                </div>
+              </div>
+              <v-btn icon="mdi-chevron-right" size="small" variant="text" :aria-label="t('features.workspace.pages.voice')" @click="openTtsSettings" />
+            </v-sheet>
+
+            <div class="inspector-actions">
+              <v-btn
+                v-if="agentWorkflowBusy"
+                class="studio-primary-action"
+                color="error"
+                size="large"
+                block
+                prepend-icon="mdi-stop"
+                @click="handleCancelRender"
+              >
+                {{ t(appStore.batchProgress?.running ? 'features.render.batch.stop' : 'features.render.config.stopLabel') }}
+              </v-btn>
+              <v-btn
+                v-else
+                class="studio-primary-action"
+                color="primary"
+                size="large"
+                block
+                prepend-icon="mdi-creation"
+                @click="handleRenderVideo"
+              >
+                {{ t('features.agent.start') }}
+              </v-btn>
+              <div class="inspector-action-hint">{{ t('features.workspace.startHint') }}</div>
+              <v-btn variant="text" block prepend-icon="mdi-tune-variant" @click="navigateToPage('export')">
+                {{ t('features.workspace.configureOutput') }}
+              </v-btn>
+            </div>
+          </aside>
+        </section>
+
+        <section v-show="activePage === 'materials'" class="page-view content-page materials-page">
+          <VideoManage ref="VideoManageInstance" :disabled="agentWorkflowBusy" />
+        </section>
+
+        <section v-show="activePage === 'models' || activePage === 'voice'" class="page-view content-page settings-page">
+          <ModelSettings
+            ref="ModelSettingsInstance"
+            :section="modelSettingsSection"
+            :disabled="agentWorkflowBusy"
+          />
+        </section>
+
+        <section v-show="activePage === 'export'" class="page-view content-page export-view">
+          <div class="export-layout">
+            <div class="export-options-column">
+              <v-sheet class="export-options-card" border rounded>
+                <div class="export-section-heading">
+                  <div class="export-heading-icon"><v-icon>mdi-tune-variant</v-icon></div>
+                  <div>
+                    <div class="inspector-title">{{ t('features.workspace.outputOptionsTitle') }}</div>
+                    <div class="inspector-caption">{{ t('features.workspace.outputOptionsHint') }}</div>
+                  </div>
+                </div>
+                <GenerationOptions />
+                <div class="export-format-summary">
+                  <div class="export-summary-item">
+                    <span class="export-summary-label">{{ t('features.render.config.output.aspectRatio') }}</span>
+                    <strong>{{ outputSizeLabel }}</strong>
+                  </div>
+                  <div class="export-summary-item">
+                    <span class="export-summary-label">{{ t('features.render.config.output.folder') }}</span>
+                    <strong class="truncate" :title="appStore.renderConfig.outputPath || ''">
+                      {{ appStore.renderConfig.outputPath || t('features.workspace.outputFolderMissing') }}
+                    </strong>
+                  </div>
+                </div>
+              </v-sheet>
+
+              <v-sheet class="voice-summary export-voice-summary" border rounded>
+                <div class="voice-summary-icon"><v-icon size="20">mdi-waveform</v-icon></div>
+                <div class="min-w-0 flex-1">
+                  <div class="inspector-title">{{ t('features.workspace.voiceSummaryTitle') }}</div>
+                  <div class="voice-summary-name">
+                    {{ t(appStore.ttsProvider === 'minimax' ? 'features.tts.config.providerMiniMax' : 'features.tts.config.providerEdge') }}
+                    <span v-if="currentVoiceName"> · {{ currentVoiceName }}</span>
+                  </div>
+                </div>
+                <v-btn variant="tonal" prepend-icon="mdi-cog-outline" @click="openTtsSettings">
+                  {{ t('common.buttons.config') }}
+                </v-btn>
+              </v-sheet>
+            </div>
+
+            <div class="export-render-column">
+              <VideoRender
+                @render-video="handleRenderVideo"
+                @cancel-render="handleCancelRender"
+              />
+              <div class="export-render-note">
+                <v-icon size="17">mdi-information-outline</v-icon>
+                <span>{{ t('features.workspace.exportNote') }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
 </template>
@@ -47,12 +237,11 @@
 <script lang="ts" setup>
 import TextGenerate from './components/TextGenerate.vue'
 import VideoManage from './components/VideoManage.vue'
-import TtsControl from './components/TtsControl.vue'
+import ModelSettings from './components/ModelSettings.vue'
 import VideoRender from './components/VideoRender.vue'
 import GenerationOptions from './components/GenerationOptions.vue'
-import TopBar from './components/TopBar.vue'
 
-import { h, onBeforeUnmount, ref } from 'vue'
+import { computed, h, nextTick, onBeforeUnmount, ref } from 'vue'
 import { RenderStatus, useAppStore } from '@/store'
 import { useTranslation } from 'i18next-vue'
 import { useToast } from 'vue-toastification'
@@ -68,6 +257,158 @@ const toast = useToast()
 const appStore = useAppStore()
 const { t } = useTranslation()
 const isMac = window.electron.platform === 'darwin'
+const hasRenderStatus = (status: RenderStatus) => appStore.renderStatus === status
+type AppPage = 'workbench' | 'materials' | 'models' | 'voice' | 'export'
+type ModelSettingsTab = 'analysis' | 'copywriting' | 'tts'
+const activePage = ref<AppPage>('materials')
+const navigationGroups: {
+  id: string
+  labelKey: string
+  items: { id: AppPage; icon: string; labelKey: string; hintKey: string }[]
+}[] = [
+  {
+    id: 'creation',
+    labelKey: 'features.workspace.navigationGroups.creation',
+    items: [
+      {
+        id: 'materials',
+        icon: 'mdi-folder-multiple-image',
+        labelKey: 'features.workspace.pages.materials',
+        hintKey: 'features.workspace.pageHints.materials',
+      },
+      {
+        id: 'voice',
+        icon: 'mdi-waveform',
+        labelKey: 'features.workspace.pages.voice',
+        hintKey: 'features.workspace.pageHints.voice',
+      },
+      {
+        id: 'workbench',
+        icon: 'mdi-creation',
+        labelKey: 'features.workspace.pages.workbench',
+        hintKey: 'features.workspace.pageHints.workbench',
+      },
+      {
+        id: 'export',
+        icon: 'mdi-movie-open-check',
+        labelKey: 'features.workspace.pages.export',
+        hintKey: 'features.workspace.pageHints.export',
+      },
+    ],
+  },
+  {
+    id: 'services',
+    labelKey: 'features.workspace.navigationGroups.services',
+    items: [
+      {
+        id: 'models',
+        icon: 'mdi-brain',
+        labelKey: 'features.workspace.pages.models',
+        hintKey: 'features.workspace.pageHints.models',
+      },
+    ],
+  },
+]
+const activePageTitleKey = computed(() => `features.workspace.pageTitles.${activePage.value}`)
+const activePageDescriptionKey = computed(() => `features.workspace.pageDescriptions.${activePage.value}`)
+const ModelSettingsInstance = ref<InstanceType<typeof ModelSettings> | null>(null)
+const modelSettingsSection = computed(() => (activePage.value === 'voice' ? 'voice' : 'models'))
+const agentWorkflowBusy = computed(
+  () =>
+    appStore.batchProgress?.running ||
+    ![RenderStatus.None, RenderStatus.Completed, RenderStatus.Failed].includes(
+      appStore.renderStatus,
+    ),
+)
+const currentVoiceName = computed(() =>
+  appStore.ttsProvider === 'minimax'
+    ? appStore.minimaxTtsVoiceName
+    : appStore.voice?.FriendlyName ?? '',
+)
+const platformName = computed(() => getAgentPlatformLabel())
+const outputSizeLabel = computed(() => {
+  const width = Number(appStore.renderConfig.outputSize.width)
+  const height = Number(appStore.renderConfig.outputSize.height)
+  const ratio = width / height
+  const commonRatios = [
+    { ratio: 9 / 16, label: '9:16' },
+    { ratio: 16 / 9, label: '16:9' },
+    { ratio: 1, label: '1:1' },
+    { ratio: 4 / 5, label: '4:5' },
+  ]
+  const match = commonRatios.find((item) => Math.abs(ratio - item.ratio) < 0.02)
+  return `${match?.label ?? `${width}:${height}`} · ${width} × ${height}`
+})
+const workflowSteps = [
+  {
+    id: 'analysis',
+    page: 'materials' as AppPage,
+    labelKey: 'features.workspace.workflow.analysis',
+    hintKey: 'features.workspace.workflow.analysisHint',
+  },
+  {
+    id: 'script',
+    page: 'workbench' as AppPage,
+    labelKey: 'features.workspace.workflow.script',
+    hintKey: 'features.workspace.workflow.scriptHint',
+  },
+  {
+    id: 'voice',
+    page: 'voice' as AppPage,
+    labelKey: 'features.workspace.workflow.voice',
+    hintKey: 'features.workspace.workflow.voiceHint',
+  },
+  {
+    id: 'export',
+    page: 'export' as AppPage,
+    labelKey: 'features.workspace.workflow.export',
+    hintKey: 'features.workspace.workflow.exportHint',
+  },
+]
+const workflowStageIndex = computed(() => {
+  switch (appStore.renderStatus) {
+    case RenderStatus.AnalyzeMaterials:
+      return 0
+    case RenderStatus.GenerateText:
+      return 1
+    case RenderStatus.SynthesizedSpeech:
+    case RenderStatus.SegmentVideo:
+      return 2
+    case RenderStatus.Rendering:
+      return 3
+    default:
+      return -1
+  }
+})
+const workflowStatusLabel = computed(() => {
+  if (agentWorkflowBusy.value) return t('features.workspace.agentRunning')
+  if (appStore.renderStatus === RenderStatus.Completed) return t('features.workspace.agentCompleted')
+  if (appStore.renderStatus === RenderStatus.Failed) return t('features.workspace.agentFailed')
+  return t('features.workspace.agentReady')
+})
+const workflowStepClass = (index: number) => ({
+  'workflow-step-complete':
+    appStore.renderStatus === RenderStatus.Completed ||
+    (agentWorkflowBusy.value && index < workflowStageIndex.value),
+  'workflow-step-active': agentWorkflowBusy.value && index === workflowStageIndex.value,
+  'workflow-step-next': !agentWorkflowBusy.value && appStore.renderStatus === RenderStatus.None && index === 0,
+})
+const workflowStepIcon = (index: number) => {
+  if (
+    appStore.renderStatus === RenderStatus.Completed ||
+    (agentWorkflowBusy.value && index < workflowStageIndex.value)
+  ) return 'mdi-check'
+  if (agentWorkflowBusy.value && index === workflowStageIndex.value) return 'mdi-play'
+  return `mdi-numeric-${index + 1}-circle-outline`
+}
+
+const navigateToPage = async (page: AppPage) => {
+  activePage.value = page
+  if (page === 'models' || page === 'voice') {
+    await nextTick()
+    ModelSettingsInstance.value?.selectTab(page === 'voice' ? 'tts' : 'analysis')
+  }
+}
 
 let dragState: {
   startMouseX: number
@@ -160,9 +501,18 @@ onBeforeUnmount(() => {
 // 渲染合成视频
 const TextGenerateInstance = ref<InstanceType<typeof TextGenerate> | null>()
 const VideoManageInstance = ref<InstanceType<typeof VideoManage> | null>()
-const TtsControlInstance = ref<InstanceType<typeof TtsControl> | null>()
+const openModelSettings = async (tab: ModelSettingsTab) => {
+  activePage.value = tab === 'tts' ? 'voice' : 'models'
+  await nextTick()
+  ModelSettingsInstance.value?.selectTab(tab)
+}
+const openCopywritingSettings = () => openModelSettings('copywriting')
+const openTtsSettings = () => openModelSettings('tts')
+const refreshModelHistory = () => ModelSettingsInstance.value?.refreshHistoryCount()
 let activeTtsSynthesisController: AbortController | null = null
-type GenerationStage = 'text' | 'tts' | 'media' | 'export'
+let activeMaterialAnalysisController: AbortController | null = null
+let cachedBatchMaterialResult: { preferredAssetPaths: string[]; promptContext: string } | undefined
+type GenerationStage = 'analysis' | 'text' | 'tts' | 'media' | 'export'
 type GenerationOutcome = 'succeeded' | 'failed' | 'cancelled'
 
 type BatchContext = BatchRunState
@@ -213,6 +563,13 @@ const classifyError = (error: unknown): string => {
   return 'unknown'
 }
 
+const getAgentPlatformLabel = () => {
+  const key = appStore.agentPlatform.replace(/-([a-z])/g, (_, letter: string) =>
+    letter.toUpperCase(),
+  )
+  return t(`features.agent.platforms.${key}`)
+}
+
 const finalizeBatch = (batch: BatchContext, stopReason: string) => {
   if (batch.finished) return
   batch.finished = true
@@ -231,6 +588,11 @@ const finalizeBatch = (batch: BatchContext, stopReason: string) => {
 let generationRunning = false
 const handleRenderVideo = async () => {
   if (generationRunning) return
+  if (appStore.copywritingStatus === 'generating') {
+    toast.warning(t('features.agent.waitForDraft'))
+    return
+  }
+  if (!ModelSettingsInstance.value?.validateSynthesisSettings()) return
   const count = Number(appStore.batchConfig?.count ?? 10)
   if (appStore.autoBatch && (!Number.isInteger(count) || count < 1 || count > 999)) {
     toast.warning(t('features.render.batch.invalidCount'))
@@ -260,6 +622,7 @@ const handleRenderVideo = async () => {
       finished: false,
     }
     const batch = appStore.batchProgress
+    cachedBatchMaterialResult = undefined
     trackAnalytics('batch_started', { batch_id: batch.id })
     try {
       const reason = await runBatch(
@@ -325,14 +688,14 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     toast.warning(t('features.render.errors.outputSizeRequired'))
     return
   }
+  const targetDurationSeconds = Number(appStore.agentTargetDurationSeconds)
   if (
-    typeof appStore.copywritingStatus === 'string' &&
-    !['completed', 'edited'].includes(appStore.copywritingStatus) &&
-    typeof appStore.prompt === 'string' &&
-    !appStore.prompt.trim()
+    !Number.isInteger(targetDurationSeconds) ||
+    targetDurationSeconds < 5 ||
+    targetDurationSeconds > 600
   ) {
-    blocked('text_missing')
-    toast.warning(t('features.llm.errors.promptRequired'))
+    blocked('agent_duration_invalid')
+    toast.warning(t('features.agent.durationInvalid'))
     return
   }
 
@@ -388,9 +751,10 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     batch,
     startedAt: performance.now(),
     stageStartedAt: performance.now(),
-    stage: 'text',
+    stage: 'analysis',
     finished: false,
     metrics: {
+      analysis_entered: true,
       text_entered: false,
       tts_entered: false,
       media_entered: false,
@@ -468,11 +832,46 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     })
     activeGeneration = task
 
-    // 获取文案
+    // 分析素材，理解视频画面后再生成适配平台的文案。
+    appStore.updateRenderStatus(RenderStatus.AnalyzeMaterials)
+    const analysisController = new AbortController()
+    activeMaterialAnalysisController = analysisController
+    let materialResult: { preferredAssetPaths: string[]; promptContext: string } | undefined =
+      batchContext ? cachedBatchMaterialResult : undefined
+    if (!materialResult) {
+      try {
+        materialResult = await VideoManageInstance.value?.analyzeMaterials({
+          platform: getAgentPlatformLabel(),
+          targetDurationSeconds,
+          creativeBrief: appStore.prompt.trim(),
+          abortSignal: analysisController.signal,
+        })
+      } finally {
+        if (activeMaterialAnalysisController === analysisController)
+          activeMaterialAnalysisController = null
+      }
+      if (batchContext && materialResult) cachedBatchMaterialResult = materialResult
+    } else {
+      activeMaterialAnalysisController = null
+    }
+    if (task.finished || !hasRenderStatus(RenderStatus.AnalyzeMaterials)) return
+    if (!materialResult) throw new Error('素材分析未能完成')
+
+    // 依据平台、时长和画面分析结果生成新文案。
     appStore.updateRenderStatus(RenderStatus.GenerateText)
+    enterStage('text')
     task.metrics.text_entered = true
-    const text = await TextGenerateInstance.value?.getTextForSynthesis()
-    if (task.finished || appStore.renderStatus !== RenderStatus.GenerateText) return
+    const scriptPrompt = t('features.agent.scriptPrompt', {
+      brief: appStore.prompt.trim() || t('features.agent.defaultBrief'),
+      platform: getAgentPlatformLabel(),
+      duration: targetDurationSeconds,
+      analysis: materialResult.promptContext,
+    }) as string
+    const text = await TextGenerateInstance.value?.getTextForSynthesis({
+      forceGenerate: true,
+      promptOverride: scriptPrompt,
+    })
+    if (task.finished || !hasRenderStatus(RenderStatus.GenerateText)) return
     if (!text) throw new Error('Generated text was empty')
     task.usage = TextGenerateInstance.value?.getGenerationAnalytics?.()
     task.metrics.text_source = task.usage?.source ?? 'unknown'
@@ -482,8 +881,7 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     if (task.usage?.outputTokens !== undefined) task.metrics.output_tokens = task.usage.outputTokens
 
     // TTS合成语音
-    // @ts-ignore
-    if (appStore.renderStatus !== RenderStatus.GenerateText) {
+    if (!hasRenderStatus(RenderStatus.GenerateText)) {
       return
     }
     appStore.updateRenderStatus(RenderStatus.SynthesizedSpeech)
@@ -493,7 +891,9 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     activeTtsSynthesisController = ttsController
     let ttsResult
     try {
-      ttsResult = await TtsControlInstance.value?.synthesizedSpeechToFile({
+      const modelSettings = ModelSettingsInstance.value
+      if (!modelSettings) throw new Error(t('features.modelSettings.ttsNotReady'))
+      ttsResult = await modelSettings.synthesizedSpeechToFile({
         text,
         withCaption: true,
         abortSignal: ttsController.signal,
@@ -511,20 +911,19 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     task.metrics.has_subtitles = subtitlesEnabled && Boolean(ttsResult.srtText)
 
     // 获取视频片段
-    // @ts-ignore
-    if (appStore.renderStatus !== RenderStatus.SynthesizedSpeech) {
+    if (!hasRenderStatus(RenderStatus.SynthesizedSpeech)) {
       return
     }
     appStore.updateRenderStatus(RenderStatus.SegmentVideo)
     enterStage('media')
     const videoSegments = await VideoManageInstance.value?.getVideoSegments({
       duration: ttsResult.duration,
+      preferredAssetPaths: materialResult.preferredAssetPaths,
     })!
     await new Promise((resolve) => setTimeout(resolve, random.integer(1000, 3000)))
 
     // 合成视频
-    // @ts-ignore
-    if (appStore.renderStatus !== RenderStatus.SegmentVideo) {
+    if (!hasRenderStatus(RenderStatus.SegmentVideo)) {
       return
     }
     appStore.updateRenderStatus(RenderStatus.Rendering)
@@ -550,7 +949,7 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     })
 
     // 取消会让主进程返回 code 255；不能将它当作完成并继续自动批处理。
-    if (task.finished || appStore.renderStatus !== RenderStatus.Rendering) return
+    if (task.finished || !hasRenderStatus(RenderStatus.Rendering)) return
     if (renderResult.code !== 0) {
       throw new Error(renderResult.stderr || `FFmpeg exited with code ${renderResult.code}`)
     }
@@ -619,6 +1018,10 @@ const handleCancelRender = () => {
   console.log('视频合成终止')
   const task = activeGeneration
   switch (appStore.renderStatus) {
+    case RenderStatus.AnalyzeMaterials:
+      activeMaterialAnalysisController?.abort()
+      break
+
     case RenderStatus.GenerateText:
       TextGenerateInstance.value?.handleStopGenerate()
       break
@@ -646,6 +1049,663 @@ const handleCancelRender = () => {
 </script>
 
 <style lang="scss" scoped>
+.app-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.9rem 0.7rem;
+  background:
+    radial-gradient(circle at 6% 0%, rgba(var(--v-theme-primary), 0.075), transparent 13rem),
+    rgb(var(--v-theme-surface));
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.25rem 0.4rem 1rem;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.sidebar-brand-mark {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.11);
+}
+
+.sidebar-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding-top: 1rem;
+}
+
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar-section-label {
+  padding: 0 0.65rem 0.25rem;
+  color: rgba(var(--v-theme-on-surface), 0.48);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.sidebar-nav-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 3px;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 54px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(var(--v-theme-on-surface), 0.72);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(var(--v-theme-on-surface), 0.045);
+}
+
+.sidebar-nav-item-active {
+  border-color: rgba(var(--v-theme-primary), 0.14);
+  color: rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.085);
+}
+
+.sidebar-nav-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.sidebar-nav-item-active .sidebar-nav-icon {
+  background: rgba(var(--v-theme-primary), 0.12);
+}
+
+.sidebar-nav-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.sidebar-nav-title {
+  overflow: hidden;
+  font-size: 0.83rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-nav-hint {
+  overflow: hidden;
+  color: rgba(var(--v-theme-on-surface), 0.52);
+  font-size: 0.67rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-nav-indicator {
+  width: 3px;
+  height: 22px;
+  border-radius: 3px;
+  background: rgb(var(--v-theme-primary));
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.sidebar-agent-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.agent-status-dot {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #4caf50;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.12);
+}
+
+.agent-status-dot-busy {
+  background: #651fff;
+  box-shadow: 0 0 0 4px rgba(101, 31, 255, 0.13);
+  animation: agent-pulse 1.4s ease-in-out infinite;
+}
+
+.sidebar-agent-title {
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.sidebar-agent-state,
+.sidebar-footer-note {
+  color: rgba(var(--v-theme-on-surface), 0.54);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+
+.sidebar-footer-note {
+  padding: 0.3rem 0.55rem 0.1rem;
+}
+
+@keyframes agent-pulse {
+  50% {
+    box-shadow: 0 0 0 7px rgba(101, 31, 255, 0.025);
+  }
+}
+
+.app-page-area {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 80px;
+  padding: 0.1rem 0.2rem 0.75rem;
+}
+
+.page-eyebrow {
+  color: rgb(var(--v-theme-primary));
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+}
+
+.page-title {
+  margin-top: 0.12rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.page-description {
+  margin-top: 0.2rem;
+  color: rgba(var(--v-theme-on-surface), 0.62);
+  font-size: 0.78rem;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.page-context-chip {
+  font-weight: 600;
+}
+
+.page-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workbench-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 314px;
+  gap: 0.9rem;
+}
+
+.workbench-main {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.studio-inspector {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.7rem;
+  overflow-y: auto;
+}
+
+.inspector-card {
+  padding: 0.9rem;
+}
+
+.inspector-card-heading,
+.export-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.inspector-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.inspector-caption {
+  margin-top: 0.2rem;
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.workflow-step-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.75rem;
+}
+
+.workflow-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 57px;
+  padding: 0.35rem 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.workflow-step:not(:last-child)::after {
+  position: absolute;
+  top: calc(50% + 14px);
+  left: 13px;
+  width: 1px;
+  height: 28px;
+  background: rgba(var(--v-border-color), 0.85);
+  content: '';
+}
+
+.workflow-step-marker {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(var(--v-border-color), 0.8);
+  border-radius: 50%;
+  color: rgba(var(--v-theme-on-surface), 0.55);
+  background: rgb(var(--v-theme-surface));
+  font-size: 0.65rem;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.workflow-step-complete .workflow-step-marker {
+  border-color: rgba(76, 175, 80, 0.22);
+  color: #2e7d32;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.workflow-step-active .workflow-step-marker,
+.workflow-step-next .workflow-step-marker {
+  border-color: rgba(var(--v-theme-primary), 0.28);
+  color: rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.09);
+}
+
+.workflow-step-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.workflow-step-title {
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.workflow-step-hint {
+  color: rgba(var(--v-theme-on-surface), 0.52);
+  font-size: 0.65rem;
+  line-height: 1.25;
+}
+
+.workflow-step-arrow {
+  color: rgba(var(--v-theme-on-surface), 0.34);
+}
+
+.workflow-step:hover .workflow-step-arrow {
+  color: rgb(var(--v-theme-primary));
+}
+
+.voice-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.8rem;
+}
+
+.voice-summary-icon,
+.export-heading-icon {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  color: rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.1);
+}
+
+.voice-summary-name {
+  overflow: hidden;
+  margin-top: 0.15rem;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.15rem 0.1rem 0.35rem;
+}
+
+.studio-primary-action {
+  min-height: 56px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.inspector-action-hint {
+  color: rgba(var(--v-theme-on-surface), 0.52);
+  font-size: 0.65rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.content-page {
+  overflow-y: auto;
+}
+
+.materials-page > :deep(*) {
+  min-height: 620px;
+}
+
+.settings-page {
+  align-items: center;
+}
+
+.settings-page > :deep(*) {
+  width: min(100%, 1040px);
+  min-height: 0;
+}
+
+.settings-page :deep(.settings-page-header) {
+  padding: 0.3rem 0.15rem 0.45rem;
+}
+
+.settings-page :deep(.settings-panel) {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.035);
+}
+
+.export-view {
+  align-items: stretch;
+}
+
+.export-layout {
+  display: grid;
+  width: min(100%, 1260px);
+  min-height: 100%;
+  grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
+  align-content: start;
+  gap: 0.85rem;
+  margin: 0 auto;
+  padding-bottom: 1rem;
+}
+
+.export-options-column,
+.export-render-column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.export-options-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  padding: 1rem;
+}
+
+.export-section-heading {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.export-format-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.6rem;
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  padding-top: 0.8rem;
+}
+
+.export-summary-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.export-summary-label {
+  color: rgba(var(--v-theme-on-surface), 0.52);
+  font-size: 0.66rem;
+}
+
+.export-summary-item strong {
+  font-size: 0.73rem;
+  font-weight: 650;
+}
+
+.export-render-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0.2rem;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.export-render-note :deep(.v-icon) {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+@media (max-width: 1180px) {
+  .app-shell {
+    grid-template-columns: 218px minmax(0, 1fr);
+  }
+
+  .workbench-view {
+    grid-template-columns: minmax(0, 1fr) 286px;
+  }
+
+  .export-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 0.8fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .workbench-view {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .workbench-main {
+    min-height: 560px;
+  }
+
+  .studio-inspector {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+    align-items: start;
+    overflow: visible;
+  }
+
+  .workflow-card {
+    grid-row: span 2;
+  }
+
+  .inspector-actions {
+    grid-column: 2;
+  }
+
+  .export-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .export-render-column {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.7fr);
+    align-items: start;
+  }
+
+  .export-render-note {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 820px) {
+  .app-shell {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .app-sidebar {
+    align-items: center;
+    padding: 0.75rem 0.3rem;
+  }
+
+  .sidebar-brand {
+    justify-content: center;
+    padding-inline: 0;
+    padding-bottom: 0.75rem;
+  }
+
+  .sidebar-brand > div,
+  .sidebar-section-label,
+  .sidebar-nav-copy,
+  .sidebar-nav-indicator {
+    display: none;
+  }
+
+  .sidebar-footer {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+    padding-top: 0.35rem;
+    border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  }
+
+  .sidebar-agent-card,
+  .sidebar-footer-note {
+    display: none;
+  }
+
+  .sidebar-nav-list {
+    width: 100%;
+    gap: 0.8rem;
+  }
+
+  .sidebar-nav-item {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0;
+  }
+
+  .sidebar-nav-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .page-header {
+    min-height: 74px;
+  }
+
+  .page-header-actions .page-context-chip {
+    display: none;
+  }
+
+  .studio-inspector {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workflow-card {
+    grid-row: auto;
+  }
+
+  .inspector-actions {
+    grid-column: auto;
+  }
+
+  .export-render-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .export-render-note {
+    grid-column: auto;
+  }
+
+  .export-format-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .title-bar {
   user-select: none;
 }

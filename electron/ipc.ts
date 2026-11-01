@@ -5,8 +5,22 @@ import { BrowserWindow, ipcMain, dialog, app, shell } from 'electron'
 import { sqBulkInsertOrUpdate, sqDelete, sqInsert, sqQuery, sqUpdate } from './sqlite'
 import { ListFilesFromFolderParams, OpenExternalParams, SelectFolderParams } from './types'
 import type { AnalyticsContextParams, AnalyticsTrackParams } from './analytics-types'
-import { edgeTtsGetVoiceList, edgeTtsSynthesizeToBase64, edgeTtsSynthesizeToFile } from './tts'
-import type { EdgeTtsSynthesizeToFileParams } from './tts/types'
+import {
+  edgeTtsGetVoiceList,
+  edgeTtsSynthesizeToBase64,
+  edgeTtsSynthesizeToFile,
+  miniMaxTtsCloneVoice,
+  miniMaxTtsGetSystemVoices,
+  miniMaxTtsSynthesizeToBase64,
+  miniMaxTtsSynthesizeToFile,
+} from './tts'
+import type {
+  EdgeTtsSynthesizeToFileParams,
+  MiniMaxTtsCloneVoiceParams,
+  MiniMaxTtsApiParams,
+  MiniMaxTtsSynthesizeCommonParams,
+  MiniMaxTtsSynthesizeToFileParams,
+} from './tts/types'
 import { renderVideo } from './ffmpeg'
 import {
   isTrustedAnalyticsSender,
@@ -299,6 +313,55 @@ export default function initIPC() {
       }
     })
   })
+
+  ipcMain.handle(
+    'minimax-tts-get-system-voices',
+    (_event, params: MiniMaxTtsApiParams) => miniMaxTtsGetSystemVoices(params),
+  )
+  ipcMain.handle(
+    'minimax-tts-clone-voice',
+    async (event, params: MiniMaxTtsCloneVoiceParams) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) throw new Error('无法获取窗口')
+      const result = await dialog.showOpenDialog(win, {
+        title: '选择用于克隆的原声音频',
+        properties: ['openFile'],
+        filters: [{ name: 'Audio files', extensions: ['mp3', 'm4a', 'wav'] }],
+      })
+      if (result.canceled || !result.filePaths[0]) return null
+      return miniMaxTtsCloneVoice({
+        ...params,
+        samplePath: result.filePaths[0],
+      })
+    },
+  )
+  ipcMain.handle(
+    'minimax-tts-synthesize-to-base64',
+    (_event, params: MiniMaxTtsSynthesizeCommonParams) => miniMaxTtsSynthesizeToBase64(params),
+  )
+  ipcMain.on('cancel-minimax-tts-synthesis', (event, requestId: unknown) => {
+    if (typeof requestId !== 'string' || !requestId) return
+    activeTtsSynthesisControllers.get(String(event.sender.id) + ':' + requestId)?.abort()
+  })
+  ipcMain.handle(
+    'minimax-tts-synthesize-to-file',
+    (event, params: MiniMaxTtsSynthesizeToFileParams) => {
+      const requestId = params?.requestId
+      if (!requestId) return miniMaxTtsSynthesizeToFile(params)
+
+      const requestKey = String(event.sender.id) + ':' + requestId
+      const controller = new AbortController()
+      activeTtsSynthesisControllers.set(requestKey, controller)
+
+      return miniMaxTtsSynthesizeToFile({ ...params, abortSignal: controller.signal }).finally(
+        () => {
+          if (activeTtsSynthesisControllers.get(requestKey) === controller) {
+            activeTtsSynthesisControllers.delete(requestKey)
+          }
+        },
+      )
+    },
+  )
 
   // 渲染视频
   ipcMain.handle('render-video', (_event, params) => {

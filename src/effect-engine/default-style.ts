@@ -3,6 +3,7 @@ import type { SubtitleStyleConfig } from './shared/types'
 export const defaultSubtitleStyle: SubtitleStyleConfig = {
   position: 'bottom',
   offsetX: 0,
+  // Calibrated for a 1920 px tall canvas; the renderer scales it with output height.
   offsetY: -210,
   safeAreaBottomRatio: 0.12,
   maxWidthRatio: 0.86,

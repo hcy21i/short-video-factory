@@ -53,6 +53,11 @@ export function renderSubtitleFrame(params: {
       : style.position === 'middle'
         ? height / 2 + text.height / 2
         : height * (1 - style.safeAreaBottomRatio)
-  text.y = baseY + style.offsetY
+  // Wider canvases reserve less room for social-app controls near the bottom edge.
+  const aspectRatio = width / height
+  const portraitLift = Math.max(0, Math.min(1, (1.3 - aspectRatio) / (1.3 - 9 / 16)))
+  const positionScale = style.position === 'bottom' ? portraitLift : 1
+  const verticalOffset = Math.round(style.offsetY * (height / 1920) * positionScale)
+  text.y = baseY + verticalOffset
   root.addChild(text)
 }

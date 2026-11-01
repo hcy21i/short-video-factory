@@ -8,7 +8,14 @@ import {
 } from './sqlite/types'
 import { ListFilesFromFolderParams, OpenExternalParams, SelectFolderParams } from './types'
 import type { AnalyticsContextParams, AnalyticsTrackParams } from './analytics-types'
-import { EdgeTtsSynthesizeCommonParams, EdgeTtsSynthesizeToFileParams } from './tts/types'
+import {
+  EdgeTtsSynthesizeCommonParams,
+  EdgeTtsSynthesizeToFileParams,
+  MiniMaxTtsCloneVoiceParams,
+  MiniMaxTtsApiParams,
+  MiniMaxTtsSynthesizeCommonParams,
+  MiniMaxTtsSynthesizeToFileParams,
+} from './tts/types'
 import { RenderVideoParams } from './ffmpeg/types'
 import type { AppLogLevel } from './logger'
 
@@ -62,6 +69,14 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('edge-tts-synthesize-to-base64', params),
   edgeTtsSynthesizeToFile: (params: EdgeTtsSynthesizeToFileParams) =>
     ipcRenderer.invoke('edge-tts-synthesize-to-file', params),
+  miniMaxTtsCloneVoice: (params: MiniMaxTtsCloneVoiceParams) =>
+    ipcRenderer.invoke('minimax-tts-clone-voice', params),
+  miniMaxTtsGetSystemVoices: (params: MiniMaxTtsApiParams) =>
+    ipcRenderer.invoke('minimax-tts-get-system-voices', params),
+  miniMaxTtsSynthesizeToBase64: (params: MiniMaxTtsSynthesizeCommonParams) =>
+    ipcRenderer.invoke('minimax-tts-synthesize-to-base64', params),
+  miniMaxTtsSynthesizeToFile: (params: MiniMaxTtsSynthesizeToFileParams) =>
+    ipcRenderer.invoke('minimax-tts-synthesize-to-file', params),
   renderVideo: (params: RenderVideoParams) => ipcRenderer.invoke('render-video', params),
   analyticsTrack: (params: AnalyticsTrackParams) => ipcRenderer.invoke('analytics-track', params),
   analyticsSetContext: (params: AnalyticsContextParams) =>

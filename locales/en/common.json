@@ -54,7 +54,9 @@
       "remove": "Remove"
     },
     "states": {
-      "noData": "No data"
+      "noData": "No data",
+      "on": "On",
+      "off": "Off"
     },
     "messages": {
       "success": {
@@ -67,7 +69,7 @@
   },
   "emptyStates": {
     "noContent": "No content yet",
-    "hintSelectFolder": "Please choose a folder above with enough storyboard assets",
+    "hintSelectFolder": "Add and scan folders, then check which sources to use for this edit",
     "assetsFolderEmpty": "The selected folder is empty"
   },
   "dialogs": {
@@ -134,6 +136,117 @@
     }
   },
   "features": {
+    "workspace": {
+      "brand": "Short Video Factory",
+      "brandHint": "AI creator studio",
+      "navigation": "Workspace navigation",
+      "agentHint": "The Agent runs material analysis, copywriting, and speech in sequence.",
+      "studioLabel": "AI VIDEO STUDIO",
+      "briefSection": "Creative brief",
+      "scriptSection": "Narration script",
+      "scriptSectionHint": "Generate it yourself or let the Agent write from the material analysis. The script remains editable.",
+      "materialCanvasTitle": "Media workspace",
+      "materialCanvasHint": "Add and scan multiple media folders. The Agent reads scenes from representative frames.",
+      "materialsInFolder": "Video clips in this folder",
+      "materialsInFolderHint": "Clips can be reused as needed to match the final speech duration.",
+      "materialsReadyHint": "Once clips are ready, the Agent analyzes sample frames and recommends a shot order.",
+      "mediaCount": "{{count}} clips",
+      "voiceServiceTitle": "Speech service",
+      "voiceServiceHint": "Choose a speech engine and voice. Set the MiniMax API connection under AI models > TTS connection.",
+      "voiceSelectionTitle": "Choose a voice",
+      "voiceSelectionHint": "Filter by language and voice, then preview your selection below.",
+      "voicePreviewTitle": "Preview and speed",
+      "voicePreviewHint": "Preview the selected voice with your own script. These settings carry into synthesis.",
+      "captionOptionsTitle": "Captions and batch runs",
+      "captionOptionsHint": "Choose on-video captions, a separate subtitle file, and continuous output.",
+      "navigationGroups": {
+        "creation": "CREATE",
+        "services": "MODELS"
+      },
+      "pages": {
+        "workbench": "Creator studio",
+        "materials": "Media library",
+        "models": "AI models",
+        "voice": "Voice studio",
+        "export": "Render & export"
+      },
+      "pageHints": {
+        "workbench": "Shape and edit your narration",
+        "materials": "Organize clips and analyze scenes",
+        "models": "Configure vision and writing models",
+        "voice": "Choose a service, voice, and preview",
+        "export": "Set format, captions, and output"
+      },
+      "pageTitles": {
+        "workbench": "Creator studio",
+        "materials": "Media library",
+        "models": "AI models",
+        "voice": "Voice studio",
+        "export": "Render & export"
+      },
+      "pageDescriptions": {
+        "workbench": "Bring your brief, materials, and voice into one workflow. Draft the narration, then let the Agent build the video.",
+        "materials": "Import storyboard clips, browse the footage, and review the scenes the Agent can use.",
+        "models": "Configure the vision and writing models, choose a provider preset, and test the connection.",
+        "voice": "Choose Edge TTS or MiniMax, set the speed, and preview the voice with your own text.",
+        "export": "Set the aspect ratio, captions, batch run, background music, and destination before rendering."
+      },
+      "agentStatus": "Creation Agent",
+      "agentReady": "Ready · waiting to start",
+      "agentRunning": "Creating video",
+      "agentCompleted": "Video complete",
+      "agentFailed": "Last run failed",
+      "workflowTitle": "Production flow",
+      "workflowHint": "Open any step to adjust it",
+      "workflow": {
+        "analysis": "Analyze footage",
+        "analysisHint": "Read scenes and shot order",
+        "script": "Write narration",
+        "scriptHint": "Use your platform, duration, and brief",
+        "voice": "Voice and edit",
+        "voiceHint": "Create speech and match video clips",
+        "export": "Render video",
+        "exportHint": "Apply output and caption settings"
+      },
+      "startHint": "The Agent analyzes footage, writes narration, creates speech, and renders the video in sequence.",
+      "configureOutput": "Adjust video and caption settings",
+      "outputOptionsTitle": "Video settings",
+      "outputOptionsHint": "Captions, SRT, and batch runs",
+      "outputFolderMissing": "Not set",
+      "exportNote": "Adjust aspect ratio, output folder, and background music in Configuration. Caption, SRT export, and batch options apply to this run.",
+      "goToExport": "Continue to render",
+      "viewProgress": "View Agent progress",
+      "stepMaterials": "Prepare video materials",
+      "stepMaterialsHint": "Choose and check the folders to use for this edit",
+      "stepModels": "Configure AI models",
+      "stepModelsHint": "Set up vision and copywriting services",
+      "stepVoice": "Choose a voice",
+      "stepVoiceHint": "Configure Edge TTS or MiniMax",
+      "voiceSummaryTitle": "Current voice settings"
+    },
+    "modelSettings": {
+      "title": "Models and services",
+      "description": "Configure separate services for material analysis, copywriting, and speech synthesis.",
+      "localSaveHint": "Settings are saved on this device",
+      "analysisTab": "Video analysis",
+      "copywritingTab": "Copywriting",
+      "ttsTab": "TTS connection",
+      "analysisTitle": "Video analysis model",
+      "analysisDescription": "Analyze sampled video frames, scene content, and shot order.",
+      "reuseCopywritingModel": "Reuse the copywriting model for video analysis",
+      "reuseCopywritingHint": "Video analysis uses the model configured on the Copywriting tab. Make sure it accepts image input.",
+      "visionModelHint": "Choose a model that accepts image input and enter the model ID provided by your service account.",
+      "copywritingTitle": "Copywriting model",
+      "copywritingDescription": "Generate narration from the platform, target duration, and creative brief.",
+      "ttsTitle": "TTS service",
+      "ttsDescription": "Configure Edge TTS or a MiniMax system voice. Loading MiniMax voices requires a network connection.",
+      "ttsNotReady": "Voice settings are still loading. Please try again in a moment.",
+      "provider": "Model provider preset",
+      "providerNote": "Presets fill common API URLs and protocols. Check your provider console for model IDs, regions, and supported features. Video analysis requires image input support. A test sends a short text request and may retry on network errors; charges depend on the provider.",
+      "testConnection": "Test text connection",
+      "invalidConfig": "Check the API URL, protocol, and model ID.",
+      "saved": "Model settings saved"
+    },
     "llm": {
       "config": {
         "promptLabel": "Prompt",
@@ -232,8 +345,72 @@
         "edited": "Edited"
       }
     },
+    "agent": {
+      "taskTitle": "Creative task",
+      "taskHint": "The Agent reviews your clips, writes a script, synthesizes speech, and renders it. Final length follows the audio.",
+      "platform": "Platform",
+      "duration": "Target length",
+      "durationInvalid": "Set a whole-number duration from 5 to 600 seconds.",
+      "llmConfigRequired": "Configure your LLM connection before asking the Agent to analyze clips or write a script.",
+      "brief": "Creative direction (optional)",
+      "briefPlaceholder": "For example: explain the product benefits in a relaxed tone for beginners.",
+      "generateScript": "Write script",
+      "waitForDraft": "Stop the current script generation before starting the Agent.",
+      "defaultBrief": "Write a natural, engaging short-video voiceover based on the supplied footage.",
+      "analysisResult": "Material analysis",
+      "analysisModes": {
+        "visual": "Visual analysis",
+        "metadata": "Basic analysis"
+      },
+      "start": "Create with Agent",
+      "scriptPrompt": "Write a voiceover for {{platform}} that targets about {{duration}} seconds.\nUser direction: {{brief}}\nVisual material analysis:\n{{analysis}}\nBase the script on the supplied footage, use a clear engaging opening, and fit the pacing and information to the target length. Return only the spoken script, without a title or production notes.",
+      "platforms": {
+        "douyin": "Douyin",
+        "xiaohongshu": "Xiaohongshu",
+        "kuaishou": "Kuaishou",
+        "wechatChannels": "WeChat Channels",
+        "bilibili": "Bilibili",
+        "tiktok": "TikTok",
+        "youtubeShorts": "YouTube Shorts",
+        "general": "General short video"
+      },
+      "panels": {
+        "creation": "Creative Agent",
+        "creationHint": "Choose the platform, finished length, and creative direction",
+        "materials": "Video library",
+        "materialsHint": "Up to 10 representative frames are sent to your configured LLM for analysis",
+        "production": "Voice and export",
+        "productionHint": "Uses your current voice, subtitle, and export settings"
+      }
+    },
     "tts": {
       "config": {
+        "provider": "Speech service",
+        "providerEdge": "Edge TTS",
+        "providerMiniMax": "MiniMax",
+        "minimaxApiKey": "MiniMax API key",
+        "minimaxApiRegion": "API region",
+        "minimaxRegionChina": "Mainland China (platform.minimaxi.com)",
+        "minimaxRegionGlobal": "Global (platform.minimax.io)",
+        "minimaxRegionHint": "Match the API key to its region: Mainland China uses api.minimaxi.com; global uses api.minimax.io.",
+        "minimaxApiKeyRequired": "Add your MiniMax API key under AI models > TTS connection first",
+        "minimaxConnectionSettings": "MiniMax connection settings",
+        "minimaxConnectionDescription": "Set the MiniMax API region and key here, then return to Voice selection to load voices.",
+        "minimaxBillingHint": "System voices need no cloning. MiniMax charges for synthesized characters; check your account for current rates.",
+        "minimaxVoice": "MiniMax system voice",
+        "minimaxVoiceLanguage": "Filter voices by language",
+        "minimaxVoiceLanguageAll": "All languages",
+        "minimaxVoiceLanguageChinese": "Chinese",
+        "minimaxVoiceLanguageEnglish": "English",
+        "minimaxVoiceLanguageOther": "Other languages",
+        "minimaxVoiceSearch": "Search voice name, description, or ID",
+        "minimaxVoiceNoMatches": "No voices match these filters",
+        "loadMiniMaxVoices": "Load / refresh system voices",
+        "minimaxVoicesLoaded": "{{count}} system voices loaded",
+        "minimaxVoiceListEmpty": "No system voices available. Check the API key or refresh the list.",
+        "minimaxVoiceRequired": "Load and select a MiniMax system voice first",
+        "minimaxPresetHint": "Using an official MiniMax preset voice. No source audio is uploaded and no cloned voice is created.",
+        "minimaxCaptionHint": "MiniMax does not return word-level subtitle timestamps, so subtitle timing is estimated from text length.",
         "language": "Language",
         "gender": "Gender",
         "voice": "Voice",
@@ -250,6 +427,7 @@
         "speedFast": "Fast"
       },
       "errors": {
+        "minimaxVoiceListFailed": "Failed to get MiniMax system voices",
         "fetchVoicesFailed": "Failed to fetch Edge TTS voice list. Please check your network",
         "synthesisFailed": "TTS synthesis failed",
         "fileCorrupt": "TTS failed: audio file is corrupted",
@@ -262,6 +440,21 @@
       }
     },
     "assets": {
+      "sources": {
+        "title": "Media folders",
+        "hint": "Add folders and choose which sources to use for this edit.",
+        "addFolder": "Add Folder",
+        "includeInEdit": "Use in this edit",
+        "removeFolder": "Remove folder",
+        "scanFolder": "Scan this folder",
+        "scanAll": "Scan all folders",
+        "scanCompleted": "Scanned {{folderCount}} folders and found {{assetCount}} videos; {{failedCount}} failed.",
+        "selectedMaterials": "Materials for this edit",
+        "selectedMaterialsHint": "Only videos in checked folders are analyzed and used in the render.",
+        "empty": "Add a folder with MP4 videos to start scanning",
+        "folderAlreadyAdded": "This folder has already been added",
+        "notScanned": "Not scanned"
+      },
       "config": {
         "folderLabel": "Storyboard assets folder"
       },
@@ -314,8 +507,11 @@
         "exportSubtitles": "Export SRT",
         "exportSubtitlesHint": "Save a same-named .srt subtitle file beside the video",
         "output": {
-          "width": "Output width",
-          "height": "Output height",
+          "aspectRatio": "Video aspect ratio",
+          "ratioPortrait": "Portrait 9:16 (1080×1920)",
+          "ratioLandscape": "Landscape 16:9 (1920×1080)",
+          "ratioSquare": "Square 1:1 (1080×1080)",
+          "ratioFeed": "Portrait feed 4:5 (1080×1350)",
           "fileName": "Output file name",
           "format": "Output format",
           "folder": "Output folder"
@@ -323,6 +519,7 @@
       },
       "status": {
         "idle": "Idle, ready to render",
+        "analyzingMaterials": "Analyzing video frames",
         "generatingText": "Generating script with AI LLM",
         "synthesizingSpeech": "Synthesizing speech with TTS",
         "segmentingVideo": "Processing video segments",
@@ -332,6 +529,7 @@
       },
       "statusShort": {
         "idle": "Ready",
+        "analyzingMaterials": "Analyzing assets",
         "generatingText": "Generating script",
         "synthesizingSpeech": "Synthesizing speech",
         "segmentingVideo": "Segmenting assets",
@@ -341,6 +539,7 @@
       },
       "statusMini": {
         "idle": "Idle",
+        "analyzingMaterials": "Analyze",
         "generatingText": "Text",
         "synthesizingSpeech": "TTS",
         "segmentingVideo": "Seg",

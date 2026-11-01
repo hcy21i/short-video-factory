@@ -9,13 +9,27 @@ import {
 } from './types'
 import { getAppTempPath } from '../lib/tools'
 import { app } from 'electron'
+import {
+  cloneMiniMaxVoice,
+  getMiniMaxSystemVoices,
+  synthesizeMiniMax,
+} from './minimax'
+import type {
+  MiniMaxTtsCloneVoiceParams,
+  MiniMaxTtsCloneVoiceResult,
+  MiniMaxTtsApiParams,
+  MiniMaxTtsSynthesizeCommonParams,
+  MiniMaxTtsSynthesizeToFileParams,
+  MiniMaxTtsSynthesizeToFileResult,
+  MiniMaxTtsSystemVoice,
+} from './types'
 
 const edgeTts = new EdgeTTS()
 const setupTime = new Date().getTime()
 const EDGE_TTS_CBR_BITS_PER_SECOND = 48_000
 
 const createAbortError = () => {
-  const error = new Error('EdgeTTS synthesis cancelled')
+  const error = new Error('TTS synthesis cancelled')
   error.name = 'AbortError'
   return error
 }
@@ -134,6 +148,145 @@ export async function edgeTtsSynthesizeToFile(
         if (fs.existsSync(partialOutputPath)) fs.unlinkSync(partialOutputPath)
       } catch (cleanupError) {
         console.warn('清理语音合成部分输出失败:', partialOutputPath, cleanupError)
+      }
+    }
+    throw error
+  }
+}
+
+export async function miniMaxTtsCloneVoice(
+  params: MiniMaxTtsCloneVoiceParams & { samplePath: string },
+): Promise<MiniMaxTtsCloneVoiceResult> {
+  const { voiceId } = await cloneMiniMaxVoice(params)
+  return {
+    voiceId,
+    voiceName: path.parse(params.samplePath).name,
+  }
+}
+
+export async function miniMaxTtsGetSystemVoices(
+  params: MiniMaxTtsApiParams,
+): Promise<MiniMaxTtsSystemVoice[]> {
+  return getMiniMaxSystemVoices(params)
+}
+
+export async function miniMaxTtsSynthesizeToBase64(params: MiniMaxTtsSynthesizeCommonParams) {
+  const result = await synthesizeMiniMax(params)
+  return result.audio.toString('base64')
+}
+
+function formatSrtTime(milliseconds: number) {
+  const ms = Math.max(0, Math.floor(milliseconds))
+  const hours = Math.floor(ms / 3_600_000)
+  const minutes = Math.floor((ms % 3_600_000) / 60_000)
+  const seconds = Math.floor((ms % 60_000) / 1000)
+  const remainder = ms % 1000
+  return (
+    String(hours).padStart(2, '0') +
+    ':' +
+    String(minutes).padStart(2, '0') +
+    ':' +
+    String(seconds).padStart(2, '0') +
+    ',' +
+    String(remainder).padStart(3, '0')
+  )
+}
+
+function makeApproximateCaptionSrt(text: string, durationSeconds: number) {
+  const normalized = text.replace(/\s+/gu, ' ').trim()
+  if (!normalized || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return undefined
+
+  const sentences = normalized
+    .split(/(?<=[。！？!?；;.\n])\s*/u)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+  const cues: string[] = []
+  for (const sentence of sentences) {
+    const hasCjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(
+      sentence,
+    )
+    const maxLength = hasCjk ? 18 : 42
+    const characters = Array.from(sentence)
+    while (characters.length > maxLength) {
+      let splitAt = maxLength
+      for (let index = maxLength - 1; index >= Math.floor(maxLength * 0.55); index -= 1) {
+        if (/\s|[，,。！？!?；;：:]/u.test(characters[index])) {
+          splitAt = index + 1
+          break
+        }
+      }
+      cues.push(characters.splice(0, splitAt).join('').trim())
+    }
+    const last = characters.join('').trim()
+    if (last) cues.push(last)
+  }
+
+  const totalWeight = cues.reduce((sum, cue) => sum + Array.from(cue).length, 0)
+  if (!totalWeight) return undefined
+
+  const totalMs = Math.max(1, Math.floor(durationSeconds * 1000))
+  let consumedWeight = 0
+  return cues
+    .map((cue, index) => {
+      const cueWeight = Array.from(cue).length
+      const start = Math.floor((totalMs * consumedWeight) / totalWeight)
+      consumedWeight += cueWeight
+      const end = Math.max(start + 1, Math.floor((totalMs * consumedWeight) / totalWeight))
+      return [
+        String(index + 1),
+        formatSrtTime(start) + ' --> ' + formatSrtTime(end),
+        cue,
+      ].join('\n')
+    })
+    .join('\n\n')
+}
+
+export async function miniMaxTtsSynthesizeToFile(
+  params: MiniMaxTtsSynthesizeToFileParams & { abortSignal?: AbortSignal },
+): Promise<MiniMaxTtsSynthesizeToFileResult> {
+  if (params.abortSignal?.aborted) throw createAbortError()
+  const result = await synthesizeMiniMax(params)
+  if (params.abortSignal?.aborted) throw createAbortError()
+
+  let duration = result.durationSeconds ?? 0
+  if (!Number.isFinite(duration) || duration <= 0) {
+    try {
+      const metadata = await parseBuffer(result.audio, { mimeType: 'audio/mpeg' })
+      duration = metadata.format?.duration ?? 0
+    } catch {
+      duration = 0
+    }
+  }
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error('MiniMax MP3 duration could not be determined.')
+  }
+
+  const outputPath = params.outputPath ?? getTempTtsVoiceFilePath()
+  const outputAudioPath = outputPath.endsWith('.mp3') ? outputPath : outputPath + '.mp3'
+  const srtPath = path.join(path.dirname(outputPath), path.basename(outputPath, '.mp3') + '.srt')
+  for (const previousOutputPath of [outputAudioPath, srtPath]) {
+    if (fs.existsSync(previousOutputPath)) fs.unlinkSync(previousOutputPath)
+  }
+  if (!fs.existsSync(path.dirname(outputPath))) {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+  }
+
+  try {
+    fs.writeFileSync(outputAudioPath, result.audio)
+    if (params.abortSignal?.aborted) throw createAbortError()
+
+    const srtText = params.withCaption
+      ? makeApproximateCaptionSrt(params.text, duration)
+      : undefined
+    if (srtText) fs.writeFileSync(srtPath, srtText)
+
+    return { duration, srtText }
+  } catch (error) {
+    for (const partialOutputPath of [outputAudioPath, srtPath]) {
+      try {
+        if (fs.existsSync(partialOutputPath)) fs.unlinkSync(partialOutputPath)
+      } catch (cleanupError) {
+        console.warn('清理 MiniMax 语音合成部分输出失败:', partialOutputPath, cleanupError)
       }
     }
     throw error

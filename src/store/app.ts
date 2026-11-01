@@ -9,6 +9,7 @@ import {
 } from '@/lib/llm/config'
 import type { CopywritingStatus, LlmConfig } from '@/lib/llm/types'
 import { normalizeBatchConfig, type BatchRunState } from '@/lib/batch'
+import type { MiniMaxApiRegion } from '~/electron/tts/types'
 
 export enum RenderStatus {
   None,
@@ -18,6 +19,22 @@ export enum RenderStatus {
   Rendering,
   Completed,
   Failed,
+  AnalyzeMaterials,
+}
+
+export type AgentPlatform =
+  | 'douyin'
+  | 'xiaohongshu'
+  | 'kuaishou'
+  | 'wechat-channels'
+  | 'bilibili'
+  | 'tiktok'
+  | 'youtube-shorts'
+  | 'general'
+
+export interface VideoAssetFolder {
+  path: string
+  enabled: boolean
 }
 
 export const useAppStore = defineStore(
@@ -32,10 +49,15 @@ export const useAppStore = defineStore(
     // 大模型文案生成
     const prompt = ref('')
     const llmConfig = ref<LlmConfig>(defaultLlmConfig())
+    const analysisLlmConfig = ref<LlmConfig>(defaultLlmConfig())
+    const analysisUsesCopywritingModel = ref(true)
     const copywritingConfig = ref(defaultCopywritingConfig())
     const copywritingStatus = ref<CopywritingStatus>('idle')
     const updateLLMConfig = (newConfig: LlmConfig) => {
       llmConfig.value = normalizeLlmConfig(newConfig)
+    }
+    const updateAnalysisLLMConfig = (newConfig: LlmConfig) => {
+      analysisLlmConfig.value = normalizeLlmConfig(newConfig)
     }
     const updateCopywritingConfig = (newConfig: typeof copywritingConfig.value) => {
       copywritingConfig.value = normalizeCopywritingConfig(newConfig)
@@ -46,9 +68,19 @@ export const useAppStore = defineStore(
 
     // 视频素材管理
     const videoAssetsFolder = ref('')
+    const videoAssetFolders = ref<VideoAssetFolder[]>([])
     const videoExportFolder = ref('')
 
+    // 自动创作 Agent
+    const agentPlatform = ref<AgentPlatform>('douyin')
+    const agentTargetDurationSeconds = ref(30)
+
     // 语音合成
+    const ttsProvider = ref<'edge' | 'minimax'>('edge')
+    const minimaxTtsApiKey = ref('')
+    const minimaxTtsApiRegion = ref<MiniMaxApiRegion>('china')
+    const minimaxTtsVoiceId = ref('')
+    const minimaxTtsVoiceName = ref('')
     const originalVoicesList = ref<EdgeTTSVoice[]>([])
     const languageList = computed(() => {
       return originalVoicesList.value
@@ -114,15 +146,26 @@ export const useAppStore = defineStore(
 
       prompt,
       llmConfig,
+      analysisLlmConfig,
+      analysisUsesCopywritingModel,
       updateLLMConfig,
+      updateAnalysisLLMConfig,
       copywritingConfig,
       updateCopywritingConfig,
       copywritingStatus,
       updateCopywritingStatus,
 
       videoAssetsFolder,
+      videoAssetFolders,
       videoExportFolder,
+      agentPlatform,
+      agentTargetDurationSeconds,
 
+      ttsProvider,
+      minimaxTtsApiKey,
+      minimaxTtsApiRegion,
+      minimaxTtsVoiceId,
+      minimaxTtsVoiceName,
       originalVoicesList,
       languageList,
       genderList,
@@ -175,9 +218,18 @@ export const useAppStore = defineStore(
         }
       },
       afterHydrate: (context) => {
+        if (!Array.isArray(context.store.videoAssetFolders)) {
+          context.store.videoAssetFolders = []
+        }
+        if (context.store.videoAssetFolders.length === 0 && context.store.videoAssetsFolder?.trim()) {
+          context.store.videoAssetFolders = [
+            { path: context.store.videoAssetsFolder, enabled: true },
+          ]
+        }
         context.store.batchConfig = normalizeBatchConfig(context.store.batchConfig)
         context.store.updateRenderConfig(context.store.renderConfig)
         context.store.updateLLMConfig(context.store.llmConfig)
+        context.store.updateAnalysisLLMConfig(context.store.analysisLlmConfig)
         context.store.updateCopywritingConfig(context.store.copywritingConfig)
       },
     },

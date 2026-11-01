@@ -226,11 +226,14 @@ app.on('activate', () => {
 // 禁用硬件加速
 // app.disableHardwareAcceleration();
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   initLogger()
   setupMainConsoleLogging()
   initSqlite()
-  initI18n()
+  // Register the i18n IPC handlers before the renderer starts requesting its
+  // locale. Loading the window while initI18n is still pending can leave the
+  // renderer's initial i18n promise rejected, so app.mount() never runs.
+  await initI18n()
   initIPC()
   initializeMetadataService()
   void startAnalytics()

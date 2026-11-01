@@ -56,6 +56,18 @@ interface Window {
     edgeTtsSynthesizeToFile: (
       params: import('./tts/types').EdgeTtsSynthesizeToFileParams,
     ) => Promise<import('./tts/types').EdgeTtsSynthesizeToFileResult>
+    miniMaxTtsCloneVoice: (
+      params: import('./tts/types').MiniMaxTtsCloneVoiceParams,
+    ) => Promise<import('./tts/types').MiniMaxTtsCloneVoiceResult | null>
+    miniMaxTtsGetSystemVoices: (
+      params: import('./tts/types').MiniMaxTtsApiParams,
+    ) => Promise<import('./tts/types').MiniMaxTtsSystemVoice[]>
+    miniMaxTtsSynthesizeToBase64: (
+      params: import('./tts/types').MiniMaxTtsSynthesizeCommonParams,
+    ) => Promise<string>
+    miniMaxTtsSynthesizeToFile: (
+      params: import('./tts/types').MiniMaxTtsSynthesizeToFileParams,
+    ) => Promise<import('./tts/types').MiniMaxTtsSynthesizeToFileResult>
     renderVideo: (
       params: import('./ffmpeg/types').RenderVideoParams,
     ) => Promise<import('./ffmpeg/types').ExecuteFFmpegResult>

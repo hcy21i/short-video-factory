@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <v-sheet class="p-4" border rounded>
+    <v-sheet class="video-render-panel p-4" border rounded>
       <div
         class="h-[166px] grid grid-cols-[120px_minmax(0,1fr)] grid-rows-[1fr_auto] gap-x-4 gap-y-3"
       >
@@ -36,7 +36,7 @@
           >
             <div class="inline-flex items-center gap-4">
               <v-icon size="28">mdi-rocket-launch</v-icon>
-              <span class="text-xl">{{ t('features.render.config.startLabel') }}</span>
+              <span class="text-xl">{{ t('features.agent.start') }}</span>
             </div>
           </v-btn>
           <v-btn
@@ -79,18 +79,15 @@
     <v-dialog v-model="configDialogShow" max-width="600" persistent>
       <v-card prepend-icon="mdi-text-box-edit-outline" :title="t('dialogs.renderConfig')">
         <v-card-text>
-          <div class="w-full flex gap-2 mb-4 items-center">
-            <v-text-field
-              :label="t('features.render.config.output.width')"
-              v-model="config.outputSize.width"
+          <div class="w-full mb-4">
+            <v-select
+              v-model="selectedAspectRatio"
+              :label="t('features.render.config.output.aspectRatio')"
+              :items="aspectRatioItems"
+              item-title="label"
+              item-value="value"
               hide-details
-            ></v-text-field>
-            <v-text-field
-              v-model="config.outputSize.height"
-              :label="t('features.render.config.output.height')"
-              hide-details
-              required
-            ></v-text-field>
+            ></v-select>
           </div>
           <div class="w-full flex gap-2 mb-4 items-center">
             <v-text-field
@@ -230,7 +227,11 @@ watch(
       renderProgress.value = 100
       return
     }
-    if (status === RenderStatus.None || status === RenderStatus.GenerateText) {
+    if (
+      status === RenderStatus.None ||
+      status === RenderStatus.AnalyzeMaterials ||
+      status === RenderStatus.GenerateText
+    ) {
       renderProgress.value = 0
     }
   },
@@ -240,6 +241,8 @@ const renderStatusShortText = computed(() => {
   if (appStore.batchProgress?.running && appStore.batchProgress.stopRequested)
     return t('features.render.batch.stopping')
   switch (appStore.renderStatus) {
+    case RenderStatus.AnalyzeMaterials:
+      return t('features.render.statusShort.analyzingMaterials')
     case RenderStatus.GenerateText:
       return t('features.render.statusShort.generatingText')
     case RenderStatus.SynthesizedSpeech:
@@ -266,6 +269,9 @@ const progressCenterPrimary = computed(() => {
   }
   if (appStore.renderStatus === RenderStatus.Failed) {
     return t('features.render.statusMini.failed')
+  }
+  if (appStore.renderStatus === RenderStatus.AnalyzeMaterials) {
+    return t('features.render.statusMini.analyzingMaterials')
   }
   if (appStore.renderStatus === RenderStatus.GenerateText) {
     return t('features.render.statusMini.generatingText')
@@ -297,6 +303,62 @@ const createConfigDraft = () => ({
   outputSize: { ...appStore.renderConfig.outputSize },
 })
 const config = ref(createConfigDraft())
+const aspectRatioPresets = [
+  {
+    value: 'portrait',
+    ratio: 9 / 16,
+    width: 1080,
+    height: 1920,
+    labelKey: 'features.render.config.output.ratioPortrait',
+  },
+  {
+    value: 'landscape',
+    ratio: 16 / 9,
+    width: 1920,
+    height: 1080,
+    labelKey: 'features.render.config.output.ratioLandscape',
+  },
+  {
+    value: 'square',
+    ratio: 1,
+    width: 1080,
+    height: 1080,
+    labelKey: 'features.render.config.output.ratioSquare',
+  },
+  {
+    value: 'feed',
+    ratio: 4 / 5,
+    width: 1080,
+    height: 1350,
+    labelKey: 'features.render.config.output.ratioFeed',
+  },
+] as const
+type AspectRatioValue = (typeof aspectRatioPresets)[number]['value']
+const aspectRatioItems = computed(() =>
+  aspectRatioPresets.map((preset) => ({ label: t(preset.labelKey), value: preset.value })),
+)
+const getNearestAspectRatio = (width: number, height: number): AspectRatioValue => {
+  const currentRatio = width / height
+  if (!Number.isFinite(currentRatio) || currentRatio <= 0) return 'portrait'
+  return aspectRatioPresets.reduce((nearest, preset) => {
+    const nearestDistance = Math.abs(Math.log(currentRatio / nearest.ratio))
+    const presetDistance = Math.abs(Math.log(currentRatio / preset.ratio))
+    return presetDistance < nearestDistance ? preset : nearest
+  }).value
+}
+const selectedAspectRatio = computed<AspectRatioValue>({
+  get: () =>
+    getNearestAspectRatio(
+      Number(config.value.outputSize.width),
+      Number(config.value.outputSize.height),
+    ),
+  set: (value) => {
+    const preset = aspectRatioPresets.find((item) => item.value === value)
+    if (preset) {
+      config.value.outputSize = { width: preset.width, height: preset.height }
+    }
+  },
+})
 const configDialogShow = ref(false)
 const resetConfigDialog = () => {
   config.value = createConfigDraft()
@@ -335,3 +397,13 @@ const handleSelectBgmFolder = async () => {
   }
 }
 </script>
+
+<style scoped lang="scss">
+.video-render-panel {
+  border-color: rgba(var(--v-border-color), 0.82);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--v-theme-primary), 0.075), transparent 16rem),
+    rgb(var(--v-theme-surface));
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+</style>

@@ -54,7 +54,9 @@
       "remove": "移除"
     },
     "states": {
-      "noData": "无数据"
+      "noData": "无数据",
+      "on": "开启",
+      "off": "关闭"
     },
     "messages": {
       "success": {
@@ -67,7 +69,7 @@
   },
   "emptyStates": {
     "noContent": "暂无内容",
-    "hintSelectFolder": "从上面选择一个包含足够分镜素材的文件夹",
+    "hintSelectFolder": "添加并扫描文件夹，再勾选要用于本次剪辑的素材来源",
     "assetsFolderEmpty": "选择的文件夹为空"
   },
   "dialogs": {
@@ -134,6 +136,117 @@
     }
   },
   "features": {
+    "workspace": {
+      "brand": "短视频工厂",
+      "brandHint": "AI 创作台",
+      "navigation": "创作台导航",
+      "agentHint": "Agent 将依次调用素材分析、文案与语音模型。",
+      "studioLabel": "AI VIDEO STUDIO",
+      "briefSection": "创作简报",
+      "scriptSection": "口播文案",
+      "scriptSectionHint": "可以手动生成，也可以交给 Agent 按素材分析结果自动撰写。文案始终可以继续编辑。",
+      "materialCanvasTitle": "素材工作区",
+      "materialCanvasHint": "添加多个素材文件夹并扫描；Agent 会从代表画面中理解场景内容。",
+      "materialsInFolder": "文件夹中的视频素材",
+      "materialsInFolderHint": "素材会按需重复抽取，用于匹配最终语音时长。",
+      "materialsReadyHint": "准备好素材后，Agent 会自动分析代表画面并推荐镜头顺序。",
+      "mediaCount": "{{count}} 个片段",
+      "voiceServiceTitle": "语音服务",
+      "voiceServiceHint": "选择语音引擎和音色；MiniMax 的 API 连接配置请到 AI 模型 > TTS 连接配置中设置。",
+      "voiceSelectionTitle": "音色选择",
+      "voiceSelectionHint": "筛选语言与音色，选好后可以在下方试听。",
+      "voicePreviewTitle": "试听与语速",
+      "voicePreviewHint": "用自己的文案试听当前音色，调整后会用于正式合成。",
+      "captionOptionsTitle": "字幕与批量任务",
+      "captionOptionsHint": "设置画面字幕、独立字幕文件和连续出片方式。",
+      "navigationGroups": {
+        "creation": "创作",
+        "services": "模型配置"
+      },
+      "pages": {
+        "workbench": "创作台",
+        "materials": "素材库",
+        "models": "AI 模型",
+        "voice": "配音选择",
+        "export": "合成导出"
+      },
+      "pageHints": {
+        "workbench": "构思并编辑口播文案",
+        "materials": "整理素材并分析画面",
+        "models": "配置分析与文案模型",
+        "voice": "选择服务、音色并试听",
+        "export": "设置比例、字幕与输出"
+      },
+      "pageTitles": {
+        "workbench": "创作台",
+        "materials": "素材库",
+        "models": "AI 模型",
+        "voice": "配音选择",
+        "export": "合成导出"
+      },
+      "pageDescriptions": {
+        "workbench": "把主题、素材和声音放在同一条制作流程里，先写好文案，再交给 Agent 完成成片。",
+        "materials": "导入并浏览分镜素材，查看画面分析结果，决定 Agent 使用的素材来源。",
+        "models": "分别配置视频理解和文案生成模型，设置常用服务商并测试连接。",
+        "voice": "选择 Edge TTS 或 MiniMax 音色，设置语速、试听文本并检查效果。",
+        "export": "设置视频比例、字幕、批量任务、背景音乐与输出目录，然后开始渲染。"
+      },
+      "agentStatus": "创作 Agent",
+      "agentReady": "已就绪 · 等待开始",
+      "agentRunning": "正在制作",
+      "agentCompleted": "成片已完成",
+      "agentFailed": "上次制作失败",
+      "workflowTitle": "制作流程",
+      "workflowHint": "每一步都可以单独打开调整",
+      "workflow": {
+        "analysis": "分析素材",
+        "analysisHint": "识别画面、场景与镜头顺序",
+        "script": "生成文案",
+        "scriptHint": "结合平台、时长和内容要求",
+        "voice": "配音与剪辑",
+        "voiceHint": "合成语音并匹配视频片段",
+        "export": "渲染成片",
+        "exportHint": "按输出配置生成视频和字幕"
+      },
+      "startHint": "开始后会依次分析素材、生成文案、配音并导出视频。",
+      "configureOutput": "调整成片与字幕设置",
+      "outputOptionsTitle": "成片设置",
+      "outputOptionsHint": "字幕、SRT 和批量任务",
+      "outputFolderMissing": "尚未设置",
+      "exportNote": "比例、输出目录和背景音乐可在“配置”中调整；现有字幕、SRT 导出和批量合成选项会应用到本次任务。",
+      "goToExport": "继续到合成",
+      "viewProgress": "查看 Agent 进度",
+      "stepMaterials": "准备视频素材",
+      "stepMaterialsHint": "选择并勾选本次剪辑要用的素材文件夹",
+      "stepModels": "配置创作模型",
+      "stepModelsHint": "设置视频理解和文案服务",
+      "stepVoice": "选择配音音色",
+      "stepVoiceHint": "设置 Edge TTS 或 MiniMax 音色",
+      "voiceSummaryTitle": "当前配音设置"
+    },
+    "modelSettings": {
+      "title": "模型与服务",
+      "description": "为素材分析、文案生成和语音合成分别配置服务。",
+      "localSaveHint": "配置保存在本机",
+      "analysisTab": "视频分析",
+      "copywritingTab": "文案生成",
+      "ttsTab": "TTS 连接配置",
+      "analysisTitle": "视频素材分析模型",
+      "analysisDescription": "分析抽取的视频画面、场景内容和镜头顺序。",
+      "reuseCopywritingModel": "视频分析复用文案模型",
+      "reuseCopywritingHint": "当前视频分析会使用文案页的模型设置；请确认所选模型支持图像输入。",
+      "visionModelHint": "请选用支持图像输入的模型，并填写此服务商控制台提供的模型 ID。",
+      "copywritingTitle": "文案生成模型",
+      "copywritingDescription": "该模型用于按平台、时长和创作要求生成口播文案。",
+      "ttsTitle": "TTS 语音服务",
+      "ttsDescription": "设置 Edge TTS 或 MiniMax 系统音色；MiniMax 音色列表需联网加载。",
+      "ttsNotReady": "语音配置尚未加载，请稍后重试。",
+      "provider": "模型服务商预设",
+      "providerNote": "预设仅用于填入常见 API 地址和协议。模型 ID、区域与功能支持以服务商控制台和文档为准；视频分析要求模型支持图像输入。测试会发送短文本请求，网络失败时可能自动重试，费用按服务商规则计算。",
+      "testConnection": "测试文本连接",
+      "invalidConfig": "请检查接口地址、协议和模型 ID。",
+      "saved": "模型配置已保存"
+    },
     "llm": {
       "config": {
         "promptLabel": "提示词",
@@ -232,8 +345,72 @@
         "edited": "已编辑"
       }
     },
+    "agent": {
+      "taskTitle": "创作任务",
+      "taskHint": "Agent 会先看素材，再生成文案、配音并合成；最终时长以语音为准。",
+      "platform": "发布平台",
+      "duration": "目标时长",
+      "durationInvalid": "目标时长请设为 5–600 秒之间的整数。",
+      "llmConfigRequired": "请先配置大模型接口，Agent 才能分析素材和生成文案。",
+      "brief": "内容要求（选填）",
+      "briefPlaceholder": "例如：介绍产品的优势，语气轻松，面向新手。",
+      "generateScript": "生成文案",
+      "waitForDraft": "请先停止正在进行的文案生成，再启动 Agent。",
+      "defaultBrief": "结合素材画面创作一段自然、有吸引力的短视频口播文案。",
+      "analysisResult": "素材分析",
+      "analysisModes": {
+        "visual": "画面分析",
+        "metadata": "基础信息"
+      },
+      "start": "让 Agent 自动制作",
+      "scriptPrompt": "为{{platform}}创作一段约{{duration}}秒的口播文案。\n用户要求：{{brief}}\n素材视觉分析：\n{{analysis}}\n请依据素材内容组织文案，开头清晰抓人，语速和信息量适合目标时长；只输出配音正文，不要标题或制作说明。",
+      "platforms": {
+        "douyin": "抖音",
+        "xiaohongshu": "小红书",
+        "kuaishou": "快手",
+        "wechatChannels": "微信视频号",
+        "bilibili": "哔哩哔哩",
+        "tiktok": "TikTok",
+        "youtubeShorts": "YouTube Shorts",
+        "general": "通用短视频"
+      },
+      "panels": {
+        "creation": "创作 Agent",
+        "creationHint": "设定平台、成片时长和内容方向",
+        "materials": "视频素材库",
+        "materialsHint": "会抽取最多 10 个代表画面交给当前大模型分析",
+        "production": "配音与导出",
+        "productionHint": "沿用语音、字幕与输出配置"
+      }
+    },
     "tts": {
       "config": {
+        "provider": "语音服务",
+        "providerEdge": "Edge TTS",
+        "providerMiniMax": "MiniMax",
+        "minimaxApiKey": "MiniMax API Key",
+        "minimaxApiRegion": "API 区域",
+        "minimaxRegionChina": "中国大陆（platform.minimaxi.com）",
+        "minimaxRegionGlobal": "国际站（platform.minimax.io）",
+        "minimaxRegionHint": "API Key 和区域必须匹配：中国大陆使用 api.minimaxi.com，国际站使用 api.minimax.io。",
+        "minimaxApiKeyRequired": "请先到“AI 模型 > TTS 连接配置”填写 MiniMax API Key",
+        "minimaxConnectionSettings": "MiniMax 连接配置",
+        "minimaxConnectionDescription": "在这里设置 MiniMax API 区域和密钥；保存后可返回配音选择页加载音色。",
+        "minimaxBillingHint": "使用系统音色不需要克隆；MiniMax 会按实际语音合成字符量计费，具体以账号当前价格为准。",
+        "minimaxVoice": "MiniMax 系统音色",
+        "minimaxVoiceLanguage": "筛选音色语言",
+        "minimaxVoiceLanguageAll": "全部语言",
+        "minimaxVoiceLanguageChinese": "中文",
+        "minimaxVoiceLanguageEnglish": "英语",
+        "minimaxVoiceLanguageOther": "其他语言",
+        "minimaxVoiceSearch": "搜索音色名称、描述或 ID",
+        "minimaxVoiceNoMatches": "没有符合筛选条件的音色",
+        "loadMiniMaxVoices": "加载 / 刷新系统音色库",
+        "minimaxVoicesLoaded": "已加载 {{count}} 个系统音色",
+        "minimaxVoiceListEmpty": "没有可用系统音色，请检查 API Key 或刷新列表",
+        "minimaxVoiceRequired": "请先加载并选择一个 MiniMax 系统音色",
+        "minimaxPresetHint": "当前使用 MiniMax 官方预设音色，不会上传原声或创建克隆音色。",
+        "minimaxCaptionHint": "MiniMax 不提供逐字字幕时间戳，字幕时间会根据文本长度估算。",
         "language": "语言",
         "gender": "性别",
         "voice": "声音",
@@ -250,6 +427,7 @@
         "speedFast": "快"
       },
       "errors": {
+        "minimaxVoiceListFailed": "获取 MiniMax 系统音色失败",
         "fetchVoicesFailed": "获取EdgeTTS语音列表失败，请检查网络",
         "synthesisFailed": "语音合成失败",
         "fileCorrupt": "语音合成失败，音频文件损坏",
@@ -262,6 +440,21 @@
       }
     },
     "assets": {
+      "sources": {
+        "title": "素材文件夹",
+        "hint": "添加多个来源，并勾选本次剪辑要使用的文件夹。",
+        "addFolder": "添加文件夹",
+        "includeInEdit": "用于本次剪辑",
+        "removeFolder": "移除文件夹",
+        "scanFolder": "扫描此文件夹",
+        "scanAll": "扫描全部文件夹",
+        "scanCompleted": "已扫描 {{folderCount}} 个文件夹，找到 {{assetCount}} 个视频；失败 {{failedCount}} 个。",
+        "selectedMaterials": "本次剪辑可用素材",
+        "selectedMaterialsHint": "仅勾选文件夹中的视频会被 Agent 分析并用于合成。",
+        "empty": "添加包含 MP4 视频的文件夹后开始扫描",
+        "folderAlreadyAdded": "这个文件夹已经添加",
+        "notScanned": "未扫描"
+      },
       "config": {
         "folderLabel": "分镜视频素材文件夹"
       },
@@ -314,8 +507,11 @@
         "exportSubtitles": "同步导出SRT",
         "exportSubtitlesHint": "在视频旁保存同名 .srt 字幕文件",
         "output": {
-          "width": "导出视频宽度",
-          "height": "导出视频高度",
+          "aspectRatio": "视频比例",
+          "ratioPortrait": "竖屏 9:16（1080×1920）",
+          "ratioLandscape": "横屏 16:9（1920×1080）",
+          "ratioSquare": "正方形 1:1（1080×1080）",
+          "ratioFeed": "竖版 4:5（1080×1350）",
           "fileName": "导出文件名",
           "format": "导出格式",
           "folder": "导出文件夹"
@@ -323,6 +519,7 @@
       },
       "status": {
         "idle": "空闲，可以开始合成",
+        "analyzingMaterials": "正在分析素材画面",
         "generatingText": "正在使用 AI 大模型生成文案",
         "synthesizingSpeech": "正在使用 TTS 合成语音",
         "segmentingVideo": "正在处理分镜素材",
@@ -332,6 +529,7 @@
       },
       "statusShort": {
         "idle": "待开始",
+        "analyzingMaterials": "分析素材中",
         "generatingText": "生成文案中",
         "synthesizingSpeech": "合成语音中",
         "segmentingVideo": "分镜处理中",
@@ -341,6 +539,7 @@
       },
       "statusMini": {
         "idle": "就绪",
+        "analyzingMaterials": "分析",
         "generatingText": "文案",
         "synthesizingSpeech": "语音",
         "segmentingVideo": "分镜",
