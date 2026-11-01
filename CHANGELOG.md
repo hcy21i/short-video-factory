@@ -4,6 +4,34 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.4.0] - 2026-11-02
+
+<!-- i18n:en:start -->
+### Added
+
+- Rebuild the app as a creator studio with separate material library, creator workflow, model settings, voice settings, and export areas
+- Add AI agent workflow for analyzing video materials and generating platform-aware scripts
+- Add MiniMax TTS with system voice selection and connection settings
+- Add multi-folder material scanning and folder selection for video composition
+
+### Fixed & Optimized
+
+- Use the selected output aspect ratio when positioning rendered subtitles
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 新增
+
+- 将应用重构为创作台，分区呈现素材库、创作流程、模型配置、配音配置和合成导出
+- 新增 Agent 创作流程，用于分析视频素材并按发布平台生成文案
+- 新增 MiniMax TTS，支持系统音色选择和连接配置
+- 新增多文件夹素材扫描，并可在视频合成时选择素材文件夹
+
+### 修复与优化
+
+- 根据所选导出比例调整渲染字幕的位置
+<!-- i18n:zh-CN:end -->
+
 ## [v1.3.0] - 2026-10-16
 
 <!-- i18n:en:start -->
@@ -193,3 +221,4 @@ All significant changes to this project will be recorded in this file.
 
 - 构建测试
 - 跨平台: macOS dmg, Windows exe, Linux AppImage.
+
