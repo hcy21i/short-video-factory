@@ -11,7 +11,7 @@
     </select>
     <p v-if="!appStore.videoAssetFolders.length">请先到素材库添加文件夹。</p>
     <button type="button" :disabled="disabled || importing || !url.trim() || !folder" @click="download">{{ importing ? `下载中 ${progress}` : '下载并导入' }}</button>
-    <p>抖音使用免登录适配器；其他平台需要预先安装 yt-dlp 并将其加入系统 PATH。支持情况取决于平台和链接。</p>
+    <p>抖音使用免登录适配器；其他平台使用内置下载引擎。支持情况取决于平台和链接。</p>
   </v-sheet>
 </template>
 

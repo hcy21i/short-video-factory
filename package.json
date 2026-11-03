@@ -1,7 +1,7 @@
 {
   "name": "short-video-factory",
   "description": "短视频工厂，一键生成产品营销与泛内容短视频，AI批量自动剪辑",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "author": {
     "name": "YILS",
     "developer": "YILS",
@@ -12,7 +12,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "cross-env VITE_CJS_IGNORE_WARNING=true vite",
-    "build": "vue-tsc && cross-env VITE_CJS_IGNORE_WARNING=true vite build && electron-builder",
+    "build": "node scripts/prepare-yt-dlp.cjs && vue-tsc && cross-env VITE_CJS_IGNORE_WARNING=true vite build && electron-builder",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:llm": "vitest run tests/llm",

@@ -4,6 +4,20 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.4.2] - 2026-11-03
+
+<!-- i18n:en:start -->
+### Fixed & Optimized
+
+- Bundle a verified yt-dlp executable and its licenses with the application, so supported link imports no longer require a separate installation.
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 修复与优化
+
+- 安装包内置经过校验的 yt-dlp 下载引擎及其许可说明，导入支持的平台链接时无需另行安装。
+<!-- i18n:zh-CN:end -->
+
 ## [v1.4.1] - 2026-11-03
 
 <!-- i18n:en:start -->

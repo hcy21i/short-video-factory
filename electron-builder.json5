@@ -8,9 +8,12 @@
     output: 'release/${version}',
   },
   files: ['dist', 'dist-electron', 'dist-native', 'locales', 'THIRD-PARTY-DOUYIN-NOTICE.txt'],
+  extraResources: [{ from: 'vendor/yt-dlp', to: 'yt-dlp' }],
   npmRebuild: false, // disable rebuild node_modules 使用包内自带预构建二进制，而不重新构建
   beforePack: './build/scripts/before-pack.js',
   mac: {
+    // The official yt-dlp executable already contains both macOS architectures.
+    x64ArchFiles: '**/Resources/yt-dlp/yt-dlp',
     target: [
       {
         target: 'dmg',
