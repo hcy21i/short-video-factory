@@ -35,8 +35,8 @@
             @click="emit('renderVideo')"
           >
             <div class="inline-flex items-center gap-4">
-              <v-icon size="28">mdi-rocket-launch</v-icon>
-              <span class="text-xl">{{ t('features.agent.start') }}</span>
+              <v-icon size="28">mdi-movie-open-play-outline</v-icon>
+              <span class="text-xl">{{ t('features.render.config.startLabel') }}</span>
             </div>
           </v-btn>
           <v-btn

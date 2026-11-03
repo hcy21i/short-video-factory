@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   },
   store: {} as Record<string, unknown>,
   getTextForSynthesis: vi.fn(),
+  getCurrentOutputText: vi.fn(() => 'A generated script'),
   synthesizeSpeech: vi.fn(),
   getVideoSegments: vi.fn(),
   random: {
@@ -43,6 +44,7 @@ const TextGenerateStub = defineComponent({
     expose({
       clearOutputText: vi.fn(),
       getTextForSynthesis: () => mocks.getTextForSynthesis(),
+      getCurrentOutputText: () => mocks.getCurrentOutputText(),
       handleStopGenerate: vi.fn(),
     })
     return () => h('div', { 'data-testid': 'text-generate-stub' })
@@ -51,7 +53,10 @@ const TextGenerateStub = defineComponent({
 
 const TtsControlStub = defineComponent({
   setup(_, { expose }) {
-    expose({ synthesizedSpeechToFile: (options: unknown) => mocks.synthesizeSpeech(options) })
+    expose({
+    synthesizedSpeechToFile: (options: unknown) => mocks.synthesizeSpeech(options),
+    validateSynthesisSettings: () => true,
+  })
     return () => h('div', { 'data-testid': 'tts-control-stub' })
   },
 })
@@ -88,6 +93,7 @@ describe('Home video render flow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getTextForSynthesis.mockReset()
+    mocks.getCurrentOutputText.mockClear()
     mocks.synthesizeSpeech.mockReset()
     mocks.getVideoSegments.mockReset()
     mocks.random.integer.mockReturnValue(0)
@@ -112,6 +118,8 @@ describe('Home video render flow', () => {
           outputFileExt: '.mp4',
         },
         autoBatch: true,
+
+        agentTargetDurationSeconds: 30,
         renderStatus: mocks.RenderStatus.None,
         updateRenderStatus(status: number) {
           this.renderStatus = status
@@ -179,7 +187,7 @@ describe('Home video render flow', () => {
         await flushPromises()
 
         expect(renderVideo).toHaveBeenCalledTimes(1)
-        expect(mocks.getTextForSynthesis).toHaveBeenCalledTimes(1)
+        expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
         expect(storeState.renderStatus).toBe(mocks.RenderStatus.None)
         expect(mocks.toast.success).not.toHaveBeenCalled()
         expect(mocks.toast.info).not.toHaveBeenCalledWith('features.render.info.batchNext')
@@ -200,6 +208,8 @@ describe('Home video render flow', () => {
         outputFileExt: '.mp4',
       },
       autoBatch: count > 1,
+
+      agentTargetDurationSeconds: 30,
       batchConfig: { count, onError: 'stop' },
       batchProgress: null as { running: boolean; completedCount: number } | null,
       renderStatus: mocks.RenderStatus.None,
@@ -246,19 +256,19 @@ describe('Home video render flow', () => {
       await wrapper.find('#render-trigger').trigger('click')
       await vi.waitFor(() => expect(renderVideo).toHaveBeenCalledTimes(1))
       await wrapper.find('#render-trigger').trigger('click')
-      expect(mocks.getTextForSynthesis).toHaveBeenCalledTimes(1)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
       renderDeferred.resolve({ stdout: '', stderr: '', code: 0 })
       await vi.waitFor(() => expect(renderVideo).toHaveBeenCalledTimes(count))
       await vi.waitFor(() => expect(storeState.batchProgress?.running ?? false).toBe(false))
 
       await vi.waitFor(() => expect(storeState.renderStatus).toBe(mocks.RenderStatus.Completed))
       expect(mocks.toast.success).toHaveBeenCalledWith('features.render.success.succeeded')
-      expect(mocks.getTextForSynthesis).toHaveBeenCalledTimes(count)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(count)
       expect(mocks.synthesizeSpeech).toHaveBeenCalledWith(
         expect.objectContaining({ text: 'A generated script', withCaption: true }),
       )
       expect(mocks.getVideoSegments).toHaveBeenCalledWith({ duration: 8 })
-      expect(mocks.getTextForSynthesis.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(mocks.getCurrentOutputText.mock.invocationCallOrder[0]).toBeLessThan(
         mocks.synthesizeSpeech.mock.invocationCallOrder[0],
       )
       expect(mocks.synthesizeSpeech.mock.invocationCallOrder[0]).toBeLessThan(
@@ -283,6 +293,8 @@ describe('Home video render flow', () => {
         outputFileExt: '.mp4',
       },
       autoBatch: true,
+
+      agentTargetDurationSeconds: 30,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status
@@ -331,7 +343,7 @@ describe('Home video render flow', () => {
 
       await vi.waitFor(() => expect(storeState.renderStatus).toBe(mocks.RenderStatus.Failed))
       expect(renderVideo).toHaveBeenCalledTimes(1)
-      expect(mocks.getTextForSynthesis).toHaveBeenCalledTimes(1)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
       expect(mocks.toast.success).not.toHaveBeenCalled()
       expect(mocks.toast.error).toHaveBeenCalledTimes(1)
       expect(consoleError).toHaveBeenCalledTimes(1)
@@ -351,6 +363,8 @@ describe('Home video render flow', () => {
         outputFileExt: '.mp4',
       },
       autoBatch: false,
+
+      agentTargetDurationSeconds: 30,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status
@@ -436,6 +450,8 @@ describe('Home video render flow', () => {
         outputFileExt: '.mp4',
       },
       autoBatch: true,
+
+      agentTargetDurationSeconds: 30,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status
@@ -476,7 +492,7 @@ describe('Home video render flow', () => {
       await vi.waitFor(() => expect(storeState.renderStatus).toBe(mocks.RenderStatus.Failed))
 
       expect(renderVideo).not.toHaveBeenCalled()
-      expect(mocks.getTextForSynthesis).toHaveBeenCalledTimes(1)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
       expect(mocks.toast.error).toHaveBeenCalledTimes(1)
     } finally {
       wrapper.unmount()
@@ -497,6 +513,8 @@ describe('Home video render flow', () => {
         outputFileExt: '.mp4',
       },
       autoBatch: true,
+
+      agentTargetDurationSeconds: 30,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status

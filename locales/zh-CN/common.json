@@ -209,10 +209,15 @@
         "exportHint": "按输出配置生成视频和字幕"
       },
       "startHint": "开始后会依次分析素材、生成文案、配音并导出视频。",
+      "goRender": "去合成导出",
+      "goRenderHint": "文案确认后，到「合成导出」里配音并出片。",
       "configureOutput": "调整成片与字幕设置",
       "outputOptionsTitle": "成片设置",
       "outputOptionsHint": "字幕、SRT 和批量任务",
       "outputFolderMissing": "尚未设置",
+      "previewTitle": "成片预览",
+      "previewHint": "渲染完成后可以直接在这里播放。",
+      "previewEmpty": "还没有生成的成片，点右侧「开始合成」出片。",
       "exportNote": "比例、输出目录和背景音乐可在“配置”中调整；现有字幕、SRT 导出和批量合成选项会应用到本次任务。",
       "goToExport": "继续到合成",
       "viewProgress": "查看 Agent 进度",
@@ -222,7 +227,50 @@
       "stepModelsHint": "设置视频理解和文案服务",
       "stepVoice": "选择配音音色",
       "stepVoiceHint": "设置 Edge TTS 或 MiniMax 音色",
-      "voiceSummaryTitle": "当前配音设置"
+      "voiceSummaryTitle": "当前配音设置",
+      "preflight": {
+        "title": "出片前检查",
+        "hint": "缺项会在这里标出来，点一下直接跳过去补。",
+        "refresh": "重新检查",
+        "goMaterials": "去素材库",
+        "goWorkbench": "去创作台",
+        "goVoice": "去配音选择",
+        "goExport": "去配置输出",
+        "ok": "已就绪",
+        "needsWork": "待补",
+        "assets": {
+          "label": "素材",
+          "ready": "已勾选 {{count}} 段",
+          "totalOnly": "库里有 {{count}} 段，但一段都没勾选",
+          "empty": "还没有可用的素材片段"
+        },
+        "review": {
+          "label": "废镜头检测",
+          "notReviewed": "还没检测，笑场/糊焦可能直接进成片",
+          "reviewedWithRanges": "已剔除 {{count}} 段，合成时会跳过",
+          "reviewedClean": "检测过，没有要剔的画面",
+          "skipped": "「合成时跳过」关着，剔除区间不会生效"
+        },
+        "script": {
+          "label": "口播文案",
+          "empty": "文案还是空的，先去创作台写或生成一版",
+          "good": "{{count}} 字，约 {{seconds}}s，和目标 {{target}}s 对得上",
+          "short": "{{count}} 字，约 {{seconds}}s，比目标 {{target}}s 短一截",
+          "long": "{{count}} 字，约 {{seconds}}s，比目标 {{target}}s 长一截"
+        },
+        "voice": {
+          "label": "配音",
+          "ready": "{{name}}",
+          "noVoice": "还没选音色",
+          "noApiKey": "MiniMax 还没填 API Key",
+          "noClone": "MiniMax 还没选音色（克隆音要先生成）"
+        },
+        "output": {
+          "label": "输出设置",
+          "ready": "{{folder}} · {{size}}",
+          "noPath": "还没选导出文件夹"
+        }
+      }
     },
     "modelSettings": {
       "title": "模型与服务",
@@ -351,6 +399,16 @@
       "platform": "发布平台",
       "duration": "目标时长",
       "durationInvalid": "目标时长请设为 5–600 秒之间的整数。",
+      "videoType": "视频类型",
+      "videoTypes": {
+        "feature": "功能讲解",
+        "painpoint": "痛点避坑",
+        "review": "实测实评",
+        "story": "故事情节",
+        "other": "其他"
+      },
+      "productKeywords": "产品关键词",
+      "productKeywordsPlaceholder": "例如：穿墙排气扇、免打孔、静音",
       "llmConfigRequired": "请先配置大模型接口，Agent 才能分析素材和生成文案。",
       "brief": "内容要求（选填）",
       "briefPlaceholder": "例如：介绍产品的优势，语气轻松，面向新手。",
@@ -381,7 +439,17 @@
         "materialsHint": "会抽取最多 10 个代表画面交给当前大模型分析",
         "production": "配音与导出",
         "productionHint": "沿用语音、字幕与输出配置"
-      }
+      },
+      "hookType": "内容钩子",
+      "hookTypes": {
+        "contrarian": "反常识断言",
+        "painpoint": "痛点提问",
+        "result": "结果前置",
+        "identity": "身份代入",
+        "number": "数字冲击",
+        "suspense": "悬念留白"
+      },
+      "materialContext": "素材分析结论（文案必须贴合这些画面，不要写画面里没有的东西）"
     },
     "tts": {
       "config": {
@@ -424,7 +492,14 @@
         "genderFemale": "女性",
         "speedSlow": "慢",
         "speedMedium": "中",
-        "speedFast": "快"
+        "speedFast": "快",
+        "cloneVoice": "克隆我的音色",
+        "cloneVoiceHint": "选一段 10 秒以上的人声素材（音频或视频都行）。克隆一次后会保存在 MiniMax 账号下，以后直接在音色列表里选，不用重复克隆。",
+        "cloneVoiceBusy": "正在克隆音色…",
+        "cloneVoiceSuccess": "音色克隆完成：{{name}}",
+        "cloneVoiceFailed": "音色克隆失败",
+        "clonedVoiceTag": "我的克隆",
+        "cloneVoiceNeedsKey": "请先到“AI 模型 > TTS 连接配置”填写 MiniMax API Key"
       },
       "errors": {
         "minimaxVoiceListFailed": "获取 MiniMax 系统音色失败",
@@ -453,7 +528,32 @@
         "selectedMaterialsHint": "仅勾选文件夹中的视频会被 Agent 分析并用于合成。",
         "empty": "添加包含 MP4 视频的文件夹后开始扫描",
         "folderAlreadyAdded": "这个文件夹已经添加",
-        "notScanned": "未扫描"
+        "notScanned": "未扫描",
+        "selectionSummary": "已选 {{selected}} / {{total}} 段",
+        "selectAll": "全选",
+        "clearSelection": "清空",
+        "analyzeSelected": "分析所选素材",
+        "analyzed": "已分析",
+        "analyzeSucceeded": "素材分析完成，文案会参考这些画面",
+        "reviewShots": "检测废镜头",
+        "reviewTitle": "废镜头检测",
+        "reviewToggle": "合成时跳过",
+        "reviewClear": "清空",
+        "reviewBadge": "剔除 {{count}} 段",
+        "reviewSucceeded": "已标出 {{count}} 段不能用的画面，合成时会跳过",
+        "reviewClean": "没有发现需要剔除的画面",
+        "reviewRangeCount": "{{count}} 段 · {{seconds}}s",
+        "reviewRangeReset": "还原",
+        "reviewRangeStart": "起",
+        "reviewRangeEnd": "止",
+        "reviewRangeShiftLeft": "整段前移 0.5 秒",
+        "reviewRangeShiftRight": "整段后移 0.5 秒",
+        "reviewRangePreview": "抽帧确认",
+        "reviewRangeRemove": "这段不剪",
+        "reviewRangePreviewLoading": "正在抽帧…",
+        "reviewRangePreviewStart": "起点",
+        "reviewRangePreviewMiddle": "中段",
+        "reviewRangePreviewEnd": "终点"
       },
       "config": {
         "folderLabel": "分镜视频素材文件夹"
@@ -464,7 +564,13 @@
         "audioDurationInvalid": "音频时长无效，请检查语音合成结果或音频文件是否正常",
         "noVideoAssets": "没有可用的视频素材，请先选择包含 MP4 视频的素材文件夹",
         "noUsableVideoAssets": "没有可读取的视频素材，请检查视频文件是否损坏或编码是否受支持",
-        "durationInsufficient": "可用视频素材总时长不足"
+        "durationInsufficient": "可用视频素材总时长不足",
+        "noSelectedAssets": "还没有勾选素材，先在素材库里把要用的片段勾上",
+        "analyzeFailed": "素材分析失败",
+        "reviewFailed": "废镜头检测失败",
+        "noFramesForReview": "没有取到可用于检测的画面",
+        "videoDurationInvalid": "读不到视频时长，没法定位这一段",
+        "reviewPreviewFailed": "抽帧失败，这条素材可能读不到画面"
       },
       "success": {
         "loadSucceeded": "素材读取成功"
@@ -549,6 +655,7 @@
       },
       "errors": {
         "subtitleExportFailed": "视频已生成，字幕导出失败",
+        "textMissing": "还没有口播文案，请先在「创作台」写好或生成文案。",
         "openOutputDirectoryFailed": "打开输出目录失败",
         "failed": "视频合成失败，请检查各项配置是否正确",
         "bgmListFailed": "获取背景音乐列表失败，请检查文件夹是否存在",

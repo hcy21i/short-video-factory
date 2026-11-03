@@ -215,6 +215,10 @@ export async function renderVideo(
       }
     }
 
+    // loudnorm 内部会升到 192kHz，不重新采样会导出 96kHz 的音轨，部分播放器/平台不认，
+    // 这里统一收敛成 48kHz / 立体声的 AAC 输出格式。
+    filters.push('[final_audio]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[aout]')
+
     // 设置 filter_complex
     args.push('-filter_complex', `${filters.join(';')}`)
 
@@ -223,7 +227,7 @@ export async function renderVideo(
       '-map',
       params.subtitlesEnabled === false ? '[vout]' : '[with_subs]',
       '-map',
-      '[final_audio]',
+      '[aout]',
     )
 
     // 编码参数
@@ -283,8 +287,8 @@ export async function renderVideo(
         }
       }
     }
-    // 返回结果
-    return result
+    // 返回结果：带上真实落盘路径（同名文件会自动加 (1) 后缀，渲染页要用它做预览）
+    return { ...result, outputPath }
   } catch (error) {
     if (isEffectRenderCancelledError(error) || params.abortSignal?.aborted) {
       return {

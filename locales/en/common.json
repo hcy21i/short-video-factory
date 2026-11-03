@@ -209,10 +209,15 @@
         "exportHint": "Apply output and caption settings"
       },
       "startHint": "The Agent analyzes footage, writes narration, creates speech, and renders the video in sequence.",
+      "goRender": "Go to Export",
+      "goRenderHint": "Once the script is ready, open Export to synthesize the voice and render.",
       "configureOutput": "Adjust video and caption settings",
       "outputOptionsTitle": "Video settings",
       "outputOptionsHint": "Captions, SRT, and batch runs",
       "outputFolderMissing": "Not set",
+      "previewTitle": "Render preview",
+      "previewHint": "Play the finished video right here once rendering completes.",
+      "previewEmpty": "No video yet. Use “Start render” on the right to produce one.",
       "exportNote": "Adjust aspect ratio, output folder, and background music in Configuration. Caption, SRT export, and batch options apply to this run.",
       "goToExport": "Continue to render",
       "viewProgress": "View Agent progress",
@@ -222,7 +227,50 @@
       "stepModelsHint": "Set up vision and copywriting services",
       "stepVoice": "Choose a voice",
       "stepVoiceHint": "Configure Edge TTS or MiniMax",
-      "voiceSummaryTitle": "Current voice settings"
+      "voiceSummaryTitle": "Current voice settings",
+      "preflight": {
+        "title": "Pre-render check",
+        "hint": "Anything missing shows up here; click to jump straight to it.",
+        "refresh": "Re-check",
+        "goMaterials": "Materials",
+        "goWorkbench": "Script",
+        "goVoice": "Voice",
+        "goExport": "Output",
+        "ok": "Ready",
+        "needsWork": "Needs work",
+        "assets": {
+          "label": "Assets",
+          "ready": "{{count}} clip(s) selected",
+          "totalOnly": "{{count}} clip(s) in library, none selected",
+          "empty": "No usable clips yet"
+        },
+        "review": {
+          "label": "Broken-take check",
+          "notReviewed": "Not checked yet — laughing/blurred takes may ship",
+          "reviewedWithRanges": "{{count}} range(s) marked, skipped while rendering",
+          "reviewedClean": "Checked, nothing to cut",
+          "skipped": "Skip toggle is off, so those ranges won't be cut"
+        },
+        "script": {
+          "label": "Script",
+          "empty": "Script is empty — write or generate one first",
+          "good": "{{count}} chars ≈ {{seconds}}s, matches the {{target}}s target",
+          "short": "{{count}} chars ≈ {{seconds}}s, shorter than the {{target}}s target",
+          "long": "{{count}} chars ≈ {{seconds}}s, longer than the {{target}}s target"
+        },
+        "voice": {
+          "label": "Voice",
+          "ready": "{{name}}",
+          "noVoice": "No voice selected yet",
+          "noApiKey": "MiniMax API key is missing",
+          "noClone": "MiniMax voice not selected yet (clone one first)"
+        },
+        "output": {
+          "label": "Output",
+          "ready": "{{folder}} · {{size}}",
+          "noPath": "Export folder not set"
+        }
+      }
     },
     "modelSettings": {
       "title": "Models and services",
@@ -351,6 +399,16 @@
       "platform": "Platform",
       "duration": "Target length",
       "durationInvalid": "Set a whole-number duration from 5 to 600 seconds.",
+      "videoType": "Video type",
+      "videoTypes": {
+        "feature": "Feature walkthrough",
+        "painpoint": "Pain-point fix",
+        "review": "Hands-on review",
+        "story": "Story arc",
+        "other": "Other"
+      },
+      "productKeywords": "Product keywords",
+      "productKeywordsPlaceholder": "e.g. wall-breaking fan, no drilling, quiet",
       "llmConfigRequired": "Configure your LLM connection before asking the Agent to analyze clips or write a script.",
       "brief": "Creative direction (optional)",
       "briefPlaceholder": "For example: explain the product benefits in a relaxed tone for beginners.",
@@ -381,7 +439,17 @@
         "materialsHint": "Up to 10 representative frames are sent to your configured LLM for analysis",
         "production": "Voice and export",
         "productionHint": "Uses your current voice, subtitle, and export settings"
-      }
+      },
+      "hookType": "Content hook",
+      "hookTypes": {
+        "contrarian": "Counter-intuitive claim",
+        "painpoint": "Pain-point question",
+        "result": "Result first",
+        "identity": "Identity callout",
+        "number": "Number shock",
+        "suspense": "Suspense"
+      },
+      "materialContext": "Material analysis (the script must match these shots; do not invent anything not on screen)"
     },
     "tts": {
       "config": {
@@ -424,7 +492,14 @@
         "genderFemale": "Female",
         "speedSlow": "Slow",
         "speedMedium": "Medium",
-        "speedFast": "Fast"
+        "speedFast": "Fast",
+        "cloneVoice": "Clone my voice",
+        "cloneVoiceHint": "Pick a 10s+ voice sample (audio or video). The clone is stored in your MiniMax account, so you only do it once and pick it from the list afterwards.",
+        "cloneVoiceBusy": "Cloning voice…",
+        "cloneVoiceSuccess": "Voice cloned: {{name}}",
+        "cloneVoiceFailed": "Voice cloning failed",
+        "clonedVoiceTag": "Cloned",
+        "cloneVoiceNeedsKey": "Fill in the MiniMax API key under AI models > TTS connection first"
       },
       "errors": {
         "minimaxVoiceListFailed": "Failed to get MiniMax system voices",
@@ -453,7 +528,32 @@
         "selectedMaterialsHint": "Only videos in checked folders are analyzed and used in the render.",
         "empty": "Add a folder with MP4 videos to start scanning",
         "folderAlreadyAdded": "This folder has already been added",
-        "notScanned": "Not scanned"
+        "notScanned": "Not scanned",
+        "selectionSummary": "{{selected}} / {{total}} selected",
+        "selectAll": "Select all",
+        "clearSelection": "Clear",
+        "analyzeSelected": "Analyze selected",
+        "analyzed": "Analyzed",
+        "analyzeSucceeded": "Analysis done — the script will follow these shots",
+        "reviewShots": "Review unusable shots",
+        "reviewTitle": "Unusable shots",
+        "reviewToggle": "Skip on render",
+        "reviewClear": "Clear",
+        "reviewBadge": "Cut {{count}}",
+        "reviewSucceeded": "Marked {{count}} unusable ranges; they will be skipped when rendering",
+        "reviewClean": "No unusable footage found",
+        "reviewRangeCount": "{{count}} clip(s) · {{seconds}}s",
+        "reviewRangeReset": "Restore",
+        "reviewRangeStart": "From",
+        "reviewRangeEnd": "To",
+        "reviewRangeShiftLeft": "Move back 0.5s",
+        "reviewRangeShiftRight": "Move forward 0.5s",
+        "reviewRangePreview": "Check frames",
+        "reviewRangeRemove": "Keep this part",
+        "reviewRangePreviewLoading": "Grabbing frames…",
+        "reviewRangePreviewStart": "Start",
+        "reviewRangePreviewMiddle": "Middle",
+        "reviewRangePreviewEnd": "End"
       },
       "config": {
         "folderLabel": "Storyboard assets folder"
@@ -464,7 +564,13 @@
         "audioDurationInvalid": "Audio duration is invalid. Please check the speech synthesis result or audio file",
         "noVideoAssets": "No available video assets. Please select an assets folder containing MP4 videos",
         "noUsableVideoAssets": "No readable video assets. Check whether the files are corrupted or use a supported codec",
-        "durationInsufficient": "Total available video assets duration is insufficient"
+        "durationInsufficient": "Total available video assets duration is insufficient",
+        "noSelectedAssets": "No clips selected yet. Tick the ones you want to use in the library.",
+        "analyzeFailed": "Material analysis failed",
+        "reviewFailed": "Unusable-shot review failed",
+        "noFramesForReview": "No frames available for review",
+        "videoDurationInvalid": "Could not read the clip duration to locate this range.",
+        "reviewPreviewFailed": "Frame capture failed — this clip may be unreadable."
       },
       "success": {
         "loadSucceeded": "Assets loaded successfully"
@@ -549,6 +655,7 @@
       },
       "errors": {
         "subtitleExportFailed": "Video created, but subtitle export failed",
+        "textMissing": "No narration script yet — write or generate one in the studio first.",
         "openOutputDirectoryFailed": "Failed to open output folder",
         "failed": "Video rendering failed. Please check all configurations",
         "bgmListFailed": "Failed to load BGM list. Please check the folder exists",

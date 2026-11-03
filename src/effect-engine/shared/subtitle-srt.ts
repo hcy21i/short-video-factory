@@ -19,6 +19,26 @@ function parseTimeToMs(timeText: string): number {
   return Math.max(0, hours * 3600000 + minutes * 60000 + seconds * 1000 + ms)
 }
 
+// TTS 生成的 SRT 在句子之间有几百毫秒的静音间隙，直接按原始时间轴渲染会让字幕
+// 在换行时“闪一下消失”，观感上像抽帧。这里把上一条字幕延长到下一个起点之前。
+const CUE_GAP_MS = 40
+
+function fillCueGaps(cues: SubtitleCue[]): SubtitleCue[] {
+  const sorted = [...cues].sort((a, b) => a.startMs - b.startMs)
+
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    const current = sorted[index]
+    const next = sorted[index + 1]
+    const targetEnd = next.startMs - CUE_GAP_MS
+    if (targetEnd <= current.endMs) {
+      continue
+    }
+    current.endMs = Math.min(targetEnd, next.startMs - 1)
+  }
+
+  return sorted
+}
+
 export function parseSrtToCues(srtText: string): SubtitleCue[] {
   // SRT 是字幕链路的标准中间格式：不绑定 TTS，可复用到 ASR / 歌词 / 外部字幕导入。
   const blocks = srtText
@@ -61,5 +81,5 @@ export function parseSrtToCues(srtText: string): SubtitleCue[] {
     })
   }
 
-  return cues
+  return fillCueGaps(cues)
 }

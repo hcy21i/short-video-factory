@@ -34,6 +34,34 @@
             :disabled="disabled"
           />
         </div>
+        <div class="grid grid-cols-[minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.2fr)] gap-2">
+          <v-select
+            v-model="appStore.videoType"
+            :items="videoTypeItems"
+            :label="t('features.agent.videoType')"
+            clearable
+            density="compact"
+            hide-details
+            :disabled="disabled"
+          />
+          <v-select
+            v-model="appStore.hookType"
+            :items="hookTypeItems"
+            :label="t('features.agent.hookType')"
+            clearable
+            density="compact"
+            hide-details
+            :disabled="disabled"
+          />
+          <v-text-field
+            v-model="appStore.productKeywords"
+            :label="t('features.agent.productKeywords')"
+            :placeholder="t('features.agent.productKeywordsPlaceholder')"
+            density="compact"
+            hide-details
+            :disabled="disabled"
+          />
+        </div>
         <div class="brief-input-row flex gap-2 flex-1 min-h-[96px]">
           <v-textarea
             v-model="appStore.prompt"
@@ -125,6 +153,7 @@ import { useToast } from 'vue-toastification'
 import ActionToastEmbed from '@/components/ActionToastEmbed.vue'
 import { copyErrorToClipboard } from '@/lib/error-copy'
 import { generateDiverseCopywriting, type GenerationPhase } from '@/lib/llm/generate-diverse'
+import { buildPlatformGuidance } from '@/lib/llm/platform-rules'
 import { getErrorDetail } from '@/lib/llm/security'
 import type { LlmConfig } from '@/lib/llm/types'
 import { useAppStore } from '@/store'
@@ -158,6 +187,44 @@ const platformItems = computed(() => [
   { title: t('features.agent.platforms.general'), value: 'general' },
 ])
 const statusLabel = computed(() => t(`features.llm.status.${appStore.copywritingStatus}`))
+const videoTypeItems = computed(() => [
+  { title: t('features.agent.videoTypes.feature'), value: 'feature' },
+  { title: t('features.agent.videoTypes.painpoint'), value: 'painpoint' },
+  { title: t('features.agent.videoTypes.review'), value: 'review' },
+  { title: t('features.agent.videoTypes.story'), value: 'story' },
+  { title: t('features.agent.videoTypes.other'), value: 'other' },
+])
+const hookTypeItems = computed(() => [
+  { title: t('features.agent.hookTypes.contrarian'), value: 'contrarian' },
+  { title: t('features.agent.hookTypes.painpoint'), value: 'painpoint' },
+  { title: t('features.agent.hookTypes.result'), value: 'result' },
+  { title: t('features.agent.hookTypes.identity'), value: 'identity' },
+  { title: t('features.agent.hookTypes.number'), value: 'number' },
+  { title: t('features.agent.hookTypes.suspense'), value: 'suspense' },
+])
+// 提示词分三段：平台规则（硬约束）、本次创作上下文（类型/关键词）、用户的需求正文
+const buildPromptWithContext = (brief: string) => {
+  const lines: string[] = []
+  const typeLabel = videoTypeItems.value.find(
+    (item) => item.value === (appStore.videoType ?? ''),
+  )?.title
+  if (typeLabel) lines.push(`${t('features.agent.videoType')}：${typeLabel}`)
+  const keywords = String(appStore.productKeywords ?? '').trim()
+  if (keywords) lines.push(`${t('features.agent.productKeywords')}：${keywords}`)
+  const platformGuidance = buildPlatformGuidance({
+    platform: appStore.agentPlatform,
+    durationSeconds: Number(appStore.agentTargetDurationSeconds) || 0,
+    hook: appStore.hookType,
+    hookLabel: hookTypeItems.value.find((item) => item.value === appStore.hookType)?.title,
+  })
+  // 素材分析结论放在上下文段，模型会把“画面里有什么”当成写作前提，避免编造没拍到的内容。
+  const analysisContext = String(appStore.materialAnalysisContext ?? '').trim()
+  if (analysisContext) {
+    lines.push(`${t('features.agent.materialContext')}：`)
+    lines.push(analysisContext)
+  }
+  return [platformGuidance, lines.join('\n'), brief.trim()].filter(Boolean).join('\n\n')
+}
 
 const showError = (message: string, error: unknown, llmConfig?: LlmConfig) => {
   const detail = getErrorDetail(error, llmConfig)
@@ -211,7 +278,7 @@ const handleGenerate = async (options?: {
   promptOverride?: string
   allowEmptyPrompt?: boolean
 }) => {
-  const generationPrompt = options?.promptOverride ?? appStore.prompt
+  const generationPrompt = buildPromptWithContext(options?.promptOverride ?? appStore.prompt)
   if (!generationPrompt.trim() && !options?.allowEmptyPrompt) {
     const error = new Error(t('features.llm.errors.promptRequired') as string)
     if (!options?.noToast) toast.warning(error.message)

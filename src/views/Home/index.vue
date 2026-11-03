@@ -151,12 +151,12 @@
                 color="primary"
                 size="large"
                 block
-                prepend-icon="mdi-creation"
-                @click="handleRenderVideo"
+                prepend-icon="mdi-movie-open-play-outline"
+                @click="navigateToPage('export')"
               >
-                {{ t('features.agent.start') }}
+                {{ t('features.workspace.goRender') }}
               </v-btn>
-              <div class="inspector-action-hint">{{ t('features.workspace.startHint') }}</div>
+              <div class="inspector-action-hint">{{ t('features.workspace.goRenderHint') }}</div>
               <v-btn variant="text" block prepend-icon="mdi-tune-variant" @click="navigateToPage('export')">
                 {{ t('features.workspace.configureOutput') }}
               </v-btn>
@@ -202,22 +202,41 @@
                 </div>
               </v-sheet>
 
-              <v-sheet class="voice-summary export-voice-summary" border rounded>
-                <div class="voice-summary-icon"><v-icon size="20">mdi-waveform</v-icon></div>
-                <div class="min-w-0 flex-1">
-                  <div class="inspector-title">{{ t('features.workspace.voiceSummaryTitle') }}</div>
-                  <div class="voice-summary-name">
-                    {{ t(appStore.ttsProvider === 'minimax' ? 'features.tts.config.providerMiniMax' : 'features.tts.config.providerEdge') }}
-                    <span v-if="currentVoiceName"> · {{ currentVoiceName }}</span>
+              <v-sheet class="export-preview-card" border rounded>
+                <div class="export-section-heading">
+                  <div class="export-heading-icon"><v-icon>mdi-movie-open-check-outline</v-icon></div>
+                  <div>
+                    <div class="inspector-title">{{ t('features.workspace.previewTitle') }}</div>
+                    <div class="inspector-caption">{{ t('features.workspace.previewHint') }}</div>
                   </div>
                 </div>
-                <v-btn variant="tonal" prepend-icon="mdi-cog-outline" @click="openTtsSettings">
-                  {{ t('common.buttons.config') }}
-                </v-btn>
+                <video
+                  v-if="renderedVideoSrc"
+                  class="export-preview-video"
+                  :src="renderedVideoSrc"
+                  controls
+                  preload="metadata"
+                ></video>
+                <div v-else class="export-preview-empty">
+                  <v-icon size="19">mdi-filmstrip-box-multiple</v-icon>
+                  <span>{{ t('features.workspace.previewEmpty') }}</span>
+                </div>
+                <div
+                  v-if="lastRenderedVideo"
+                  class="export-preview-path"
+                  :title="lastRenderedVideo"
+                >
+                  {{ lastRenderedVideo }}
+                </div>
               </v-sheet>
             </div>
 
             <div class="export-render-column">
+              <PreflightChecklist
+                :items="preflightItems"
+                @action="handlePreflightAction"
+                @refresh="refreshPreflight"
+              />
               <VideoRender
                 @render-video="handleRenderVideo"
                 @cancel-render="handleCancelRender"
@@ -240,8 +259,9 @@ import VideoManage from './components/VideoManage.vue'
 import ModelSettings from './components/ModelSettings.vue'
 import VideoRender from './components/VideoRender.vue'
 import GenerationOptions from './components/GenerationOptions.vue'
+import PreflightChecklist from './components/PreflightChecklist.vue'
 
-import { computed, h, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, h, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { RenderStatus, useAppStore } from '@/store'
 import { useTranslation } from 'i18next-vue'
 import { useToast } from 'vue-toastification'
@@ -252,6 +272,11 @@ import random from 'random'
 import { formatErrorForCopy } from '@/lib/error-copy'
 import { createAnalyticsOperationId, trackAnalytics } from '@/lib/analytics'
 import { runBatch, type BatchRunState } from '@/lib/batch'
+import {
+  estimateSpeechSeconds,
+  isDurationOnTarget,
+  type PreflightItem,
+} from '@/lib/preflight'
 
 const toast = useToast()
 const appStore = useAppStore()
@@ -277,16 +302,16 @@ const navigationGroups: {
         hintKey: 'features.workspace.pageHints.materials',
       },
       {
-        id: 'voice',
-        icon: 'mdi-waveform',
-        labelKey: 'features.workspace.pages.voice',
-        hintKey: 'features.workspace.pageHints.voice',
-      },
-      {
         id: 'workbench',
         icon: 'mdi-creation',
         labelKey: 'features.workspace.pages.workbench',
         hintKey: 'features.workspace.pageHints.workbench',
+      },
+      {
+        id: 'voice',
+        icon: 'mdi-waveform',
+        labelKey: 'features.workspace.pages.voice',
+        hintKey: 'features.workspace.pageHints.voice',
       },
       {
         id: 'export',
@@ -320,6 +345,13 @@ const agentWorkflowBusy = computed(
       appStore.renderStatus,
     ),
 )
+// 最近一次成功渲染的成片，渲染完成后在导出页下方直接预览
+const lastRenderedVideo = ref('')
+const renderedVideoSrc = computed(() => {
+  const normalized = lastRenderedVideo.value.replace(/\\/g, '/').trim()
+  if (!normalized) return ''
+  return normalized.startsWith('/') ? `file://${normalized}` : `file:///${normalized}`
+})
 const currentVoiceName = computed(() =>
   appStore.ttsProvider === 'minimax'
     ? appStore.minimaxTtsVoiceName
@@ -401,6 +433,141 @@ const workflowStepIcon = (index: number) => {
   if (agentWorkflowBusy.value && index === workflowStageIndex.value) return 'mdi-play'
   return `mdi-numeric-${index + 1}-circle-outline`
 }
+
+// ---- 出片前检查 ----
+// 手动流程下最容易漏的四件事：素材没勾、笑场没检测、文案没写、输出目录/音色没配。
+// 这里把它们摊在导出页上，缺项能直接跳过去补；真正点合成时还会再拦一次。
+const preflightItems = ref<PreflightItem[]>([])
+const preflightSnapshot = ref({
+  selectedCount: 0,
+  totalCount: 0,
+  reviewed: false,
+  rangeCount: 0,
+})
+
+// 配音就绪与否只看 store：ttsControl 只有在访问过配音页之后才挂得上，
+// 早期版本因此在导出页静默不干活，这里改成明着显示缺什么。
+const voiceConfigIssue = () => {
+  if (appStore.ttsProvider === 'minimax') {
+    if (!appStore.minimaxTtsApiKey?.trim()) return 'features.workspace.preflight.voice.noApiKey' as const
+    if (!appStore.minimaxTtsVoiceId?.trim()) return 'features.workspace.preflight.voice.noClone' as const
+    return '' as const
+  }
+  return appStore.voice ? ('' as const) : ('features.workspace.preflight.voice.noVoice' as const)
+}
+
+const refreshPreflight = () => {
+  const snapshot = VideoManageInstance.value?.getPreflightSnapshot()
+  if (snapshot) preflightSnapshot.value = snapshot
+  const { selectedCount, totalCount, reviewed, rangeCount } = preflightSnapshot.value
+  const targetSeconds = Number(appStore.agentTargetDurationSeconds) || 0
+  const script = TextGenerateInstance.value?.getCurrentOutputText()?.trim() ?? ''
+  const speechSeconds = estimateSpeechSeconds(script)
+  const onTarget = isDurationOnTarget(speechSeconds, targetSeconds)
+  const secondsLabel = String(Math.max(1, Math.round(speechSeconds)))
+  const skipEnabled = appStore.skipUnusableShots !== false
+  const items: PreflightItem[] = []
+
+  items.push({
+    id: 'assets',
+    label: t('features.workspace.preflight.assets.label'),
+    detail: selectedCount
+      ? t('features.workspace.preflight.assets.ready', { count: selectedCount })
+      : totalCount
+        ? t('features.workspace.preflight.assets.totalOnly', { count: totalCount })
+        : t('features.workspace.preflight.assets.empty'),
+    status: selectedCount ? 'ok' : 'warn',
+    actionLabel: selectedCount ? undefined : t('features.workspace.preflight.goMaterials'),
+  })
+
+  const reviewIssue = !reviewed
+    ? t('features.workspace.preflight.review.notReviewed')
+    : rangeCount && !skipEnabled
+      ? t('features.workspace.preflight.review.skipped')
+      : rangeCount
+        ? t('features.workspace.preflight.review.reviewedWithRanges', { count: rangeCount })
+        : t('features.workspace.preflight.review.reviewedClean')
+  items.push({
+    id: 'review',
+    label: t('features.workspace.preflight.review.label'),
+    detail: reviewIssue,
+    status: !reviewed || (rangeCount > 0 && !skipEnabled) ? 'warn' : 'ok',
+    actionLabel:
+      !reviewed || (rangeCount > 0 && !skipEnabled)
+        ? t('features.workspace.preflight.goMaterials')
+        : undefined,
+  })
+
+  items.push({
+    id: 'script',
+    label: t('features.workspace.preflight.script.label'),
+    detail: !script
+      ? t('features.workspace.preflight.script.empty')
+      : onTarget
+        ? t('features.workspace.preflight.script.good', {
+            count: script.length,
+            seconds: secondsLabel,
+            target: targetSeconds,
+          })
+        : t(
+            speechSeconds < targetSeconds
+              ? 'features.workspace.preflight.script.short'
+              : 'features.workspace.preflight.script.long',
+            { count: script.length, seconds: secondsLabel, target: targetSeconds },
+          ),
+    status: script && onTarget ? 'ok' : 'warn',
+    actionLabel: script && onTarget ? undefined : t('features.workspace.preflight.goWorkbench'),
+  })
+
+  const voiceIssue = voiceConfigIssue()
+  items.push({
+    id: 'voice',
+    label: t('features.workspace.preflight.voice.label'),
+    detail: voiceIssue
+      ? t(voiceIssue)
+      : t('features.workspace.preflight.voice.ready', {
+          name: currentVoiceName.value || t('features.workspace.preflight.ok'),
+        }),
+    status: voiceIssue ? 'warn' : 'ok',
+    actionLabel: voiceIssue ? t('features.workspace.preflight.goVoice') : undefined,
+  })
+
+  items.push({
+    id: 'output',
+    label: t('features.workspace.preflight.output.label'),
+    detail: appStore.renderConfig.outputPath
+      ? t('features.workspace.preflight.output.ready', {
+          folder: appStore.renderConfig.outputPath,
+          size: outputSizeLabel.value,
+        })
+      : t('features.workspace.preflight.output.noPath'),
+    status: appStore.renderConfig.outputPath ? 'ok' : 'warn',
+    actionLabel: appStore.renderConfig.outputPath ? undefined : t('features.workspace.preflight.goExport'),
+  })
+
+  preflightItems.value = items
+}
+
+const handlePreflightAction = (id: PreflightItem['id']) => {
+  if (id === 'assets' || id === 'review') {
+    void navigateToPage('materials')
+    return
+  }
+  if (id === 'script') {
+    void navigateToPage('workbench')
+    return
+  }
+  if (id === 'voice') {
+    void navigateToPage('voice')
+    return
+  }
+  void navigateToPage('export')
+}
+
+// 切到导出页就看一眼当前状态；素材页改勾选、配音页换音色后回来也能立刻反映
+watch(activePage, (page) => {
+  if (page === 'export') refreshPreflight()
+})
 
 const navigateToPage = async (page: AppPage) => {
   activePage.value = page
@@ -510,8 +677,6 @@ const openCopywritingSettings = () => openModelSettings('copywriting')
 const openTtsSettings = () => openModelSettings('tts')
 const refreshModelHistory = () => ModelSettingsInstance.value?.refreshHistoryCount()
 let activeTtsSynthesisController: AbortController | null = null
-let activeMaterialAnalysisController: AbortController | null = null
-let cachedBatchMaterialResult: { preferredAssetPaths: string[]; promptContext: string } | undefined
 type GenerationStage = 'analysis' | 'text' | 'tts' | 'media' | 'export'
 type GenerationOutcome = 'succeeded' | 'failed' | 'cancelled'
 
@@ -592,7 +757,15 @@ const handleRenderVideo = async () => {
     toast.warning(t('features.agent.waitForDraft'))
     return
   }
-  if (!ModelSettingsInstance.value?.validateSynthesisSettings()) return
+  // 先跑一遍出片前检查：缺项在导出页上已经标红，这里拦住并把原因说清楚
+  refreshPreflight()
+  const blocking = preflightItems.value.filter((item) => item.status === 'warn' && item.id !== 'review')
+  if (blocking.length) {
+    toast.warning(blocking[0].detail)
+    return
+  }
+  // 配音页没进过时 ttsControl 还没挂上，只按 store 判断就好，别静默返回
+  if (ModelSettingsInstance.value && !ModelSettingsInstance.value.validateSynthesisSettings()) return
   const count = Number(appStore.batchConfig?.count ?? 10)
   if (appStore.autoBatch && (!Number.isInteger(count) || count < 1 || count > 999)) {
     toast.warning(t('features.render.batch.invalidCount'))
@@ -622,14 +795,13 @@ const handleRenderVideo = async () => {
       finished: false,
     }
     const batch = appStore.batchProgress
-    cachedBatchMaterialResult = undefined
     trackAnalytics('batch_started', { batch_id: batch.id })
     try {
       const reason = await runBatch(
         batch,
         () => renderSingleVideo(batch),
         () => {
-          TextGenerateInstance.value?.clearOutputText?.()
+          // 手动流程下文案由用户维护，批量合成时不能清空。
         },
       )
       finalizeBatch(batch, reason)
@@ -832,47 +1004,12 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     })
     activeGeneration = task
 
-    // 分析素材，理解视频画面后再生成适配平台的文案。
-    appStore.updateRenderStatus(RenderStatus.AnalyzeMaterials)
-    const analysisController = new AbortController()
-    activeMaterialAnalysisController = analysisController
-    let materialResult: { preferredAssetPaths: string[]; promptContext: string } | undefined =
-      batchContext ? cachedBatchMaterialResult : undefined
-    if (!materialResult) {
-      try {
-        materialResult = await VideoManageInstance.value?.analyzeMaterials({
-          platform: getAgentPlatformLabel(),
-          targetDurationSeconds,
-          creativeBrief: appStore.prompt.trim(),
-          abortSignal: analysisController.signal,
-        })
-      } finally {
-        if (activeMaterialAnalysisController === analysisController)
-          activeMaterialAnalysisController = null
-      }
-      if (batchContext && materialResult) cachedBatchMaterialResult = materialResult
-    } else {
-      activeMaterialAnalysisController = null
-    }
-    if (task.finished || !hasRenderStatus(RenderStatus.AnalyzeMaterials)) return
-    if (!materialResult) throw new Error('素材分析未能完成')
-
-    // 依据平台、时长和画面分析结果生成新文案。
-    appStore.updateRenderStatus(RenderStatus.GenerateText)
+    // 手动流程：直接使用创作台里已经写好的口播文案，不再自动分析素材或重新生成文案。
+    if (task.finished) return
+    const text = TextGenerateInstance.value?.getCurrentOutputText()?.trim()
+    if (!text) throw new Error(t('features.render.errors.textMissing'))
     enterStage('text')
     task.metrics.text_entered = true
-    const scriptPrompt = t('features.agent.scriptPrompt', {
-      brief: appStore.prompt.trim() || t('features.agent.defaultBrief'),
-      platform: getAgentPlatformLabel(),
-      duration: targetDurationSeconds,
-      analysis: materialResult.promptContext,
-    }) as string
-    const text = await TextGenerateInstance.value?.getTextForSynthesis({
-      forceGenerate: true,
-      promptOverride: scriptPrompt,
-    })
-    if (task.finished || !hasRenderStatus(RenderStatus.GenerateText)) return
-    if (!text) throw new Error('Generated text was empty')
     task.usage = TextGenerateInstance.value?.getGenerationAnalytics?.()
     task.metrics.text_source = task.usage?.source ?? 'unknown'
     task.metrics.llm_call_count = task.usage?.callCount ?? 0
@@ -880,10 +1017,7 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     if (task.usage?.inputTokens !== undefined) task.metrics.input_tokens = task.usage.inputTokens
     if (task.usage?.outputTokens !== undefined) task.metrics.output_tokens = task.usage.outputTokens
 
-    // TTS合成语音
-    if (!hasRenderStatus(RenderStatus.GenerateText)) {
-      return
-    }
+    // TTS合成语音（用当前选中的配音服务把文案转成语音和字幕）
     appStore.updateRenderStatus(RenderStatus.SynthesizedSpeech)
     enterStage('tts')
     task.metrics.tts_characters = text.length
@@ -918,7 +1052,6 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     enterStage('media')
     const videoSegments = await VideoManageInstance.value?.getVideoSegments({
       duration: ttsResult.duration,
-      preferredAssetPaths: materialResult.preferredAssetPaths,
     })!
     await new Promise((resolve) => setTimeout(resolve, random.integer(1000, 3000)))
 
@@ -953,6 +1086,7 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     if (renderResult.code !== 0) {
       throw new Error(renderResult.stderr || `FFmpeg exited with code ${renderResult.code}`)
     }
+    lastRenderedVideo.value = renderResult.outputPath ?? ''
 
     if (renderResult.subtitleExportError) {
       if (batch) batch.warningCount += 1
@@ -1018,14 +1152,6 @@ const handleCancelRender = () => {
   console.log('视频合成终止')
   const task = activeGeneration
   switch (appStore.renderStatus) {
-    case RenderStatus.AnalyzeMaterials:
-      activeMaterialAnalysisController?.abort()
-      break
-
-    case RenderStatus.GenerateText:
-      TextGenerateInstance.value?.handleStopGenerate()
-      break
-
     case RenderStatus.SynthesizedSpeech:
       activeTtsSynthesisController?.abort()
       break
@@ -1516,6 +1642,44 @@ const handleCancelRender = () => {
   flex-direction: column;
   gap: 0.95rem;
   padding: 1rem;
+}
+
+.export-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem;
+}
+
+.export-preview-video {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 420px;
+  max-height: 420px;
+  margin: 0 auto;
+  border-radius: 10px;
+  background: #000;
+}
+
+.export-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 132px;
+  border: 1px dashed rgba(var(--v-border-color), 0.9);
+  border-radius: 10px;
+  color: rgba(var(--v-theme-on-surface), 0.45);
+  font-size: 0.72rem;
+}
+
+.export-preview-path {
+  overflow: hidden;
+  color: rgba(var(--v-theme-on-surface), 0.5);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .export-section-heading {

@@ -37,6 +37,12 @@ export interface VideoAssetFolder {
   enabled: boolean
 }
 
+/** MiniMax 克隆音色：克隆一次保存在 MiniMax 账号下，本地只记 voiceId 方便下次直接选 */
+export interface ClonedVoice {
+  voiceId: string
+  voiceName: string
+}
+
 export const useAppStore = defineStore(
   'app',
   () => {
@@ -74,6 +80,14 @@ export const useAppStore = defineStore(
     // 自动创作 Agent
     const agentPlatform = ref<AgentPlatform>('douyin')
     const agentTargetDurationSeconds = ref(30)
+    // 文案生成时的题材约束：视频类型（钩子分类）与产品关键词
+    const videoType = ref('')
+    const productKeywords = ref('')
+    const hookType = ref('')
+    // 素材库对所选素材做视觉分析后的结论，拼进文案提示词，让文案贴合真实画面
+    const materialAnalysisContext = ref('')
+    // 合成时是否跳过检测出来的废镜头（笑场、NG）；关掉后按整条素材随机取段
+    const skipUnusableShots = ref(true)
 
     // 语音合成
     const ttsProvider = ref<'edge' | 'minimax'>('edge')
@@ -81,6 +95,7 @@ export const useAppStore = defineStore(
     const minimaxTtsApiRegion = ref<MiniMaxApiRegion>('china')
     const minimaxTtsVoiceId = ref('')
     const minimaxTtsVoiceName = ref('')
+    const minimaxClonedVoices = ref<ClonedVoice[]>([])
     const originalVoicesList = ref<EdgeTTSVoice[]>([])
     const languageList = computed(() => {
       return originalVoicesList.value
@@ -160,12 +175,18 @@ export const useAppStore = defineStore(
       videoExportFolder,
       agentPlatform,
       agentTargetDurationSeconds,
+      videoType,
+      productKeywords,
+      hookType,
+      materialAnalysisContext,
+      skipUnusableShots,
 
       ttsProvider,
       minimaxTtsApiKey,
       minimaxTtsApiRegion,
       minimaxTtsVoiceId,
       minimaxTtsVoiceName,
+      minimaxClonedVoices,
       originalVoicesList,
       languageList,
       genderList,
@@ -198,6 +219,8 @@ export const useAppStore = defineStore(
         'batchProgress',
         'renderStatus',
         'copywritingStatus',
+        // 分析结论依赖本次扫描到的素材，跨会话保留会指向已不存在的素材
+        'materialAnalysisContext',
       ],
       beforeHydrate: (context) => {
         // Pinia merges persisted state into default state before afterHydrate, so an old record
@@ -220,6 +243,9 @@ export const useAppStore = defineStore(
       afterHydrate: (context) => {
         if (!Array.isArray(context.store.videoAssetFolders)) {
           context.store.videoAssetFolders = []
+        }
+        if (!Array.isArray(context.store.minimaxClonedVoices)) {
+          context.store.minimaxClonedVoices = []
         }
         if (context.store.videoAssetFolders.length === 0 && context.store.videoAssetsFolder?.trim()) {
           context.store.videoAssetFolders = [

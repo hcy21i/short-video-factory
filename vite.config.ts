@@ -165,6 +165,13 @@ export default defineConfig(({ mode, command }) => {
             : {},
       }),
     ],
+    server: {
+      // 编辑器/文件工具会用「同级临时目录 + 原子改名」落盘，chokidar 扫到被锁的临时文件时
+      // 会抛 EBUSY 并直接结束 dev server，这里忽略这些临时产物。
+      watch: {
+        ignored: ['**/*.tmpdir/**', '**/*.tmp', '**/*.swp'],
+      },
+    },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

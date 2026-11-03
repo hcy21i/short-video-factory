@@ -21,7 +21,7 @@ import type {
   MiniMaxTtsSynthesizeCommonParams,
   MiniMaxTtsSynthesizeToFileParams,
 } from './tts/types'
-import { renderVideo } from './ffmpeg'
+import { executeFFmpeg, renderVideo } from './ffmpeg'
 import {
   isTrustedAnalyticsSender,
   markAnalyticsActive,
@@ -96,6 +96,23 @@ function resolveDefaultFolderPath(customPath?: string | null) {
   }
 
   return null
+}
+
+// 视频扩展名：MiniMax 只接受音频文件，用视频克隆时先抽一轨 16k 单声道 wav
+const VOICE_CLONE_VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.webm'])
+
+async function prepareVoiceCloneSample(samplePath: string): Promise<string> {
+  if (!VOICE_CLONE_VIDEO_EXTENSIONS.has(path.extname(samplePath).toLowerCase())) {
+    return samplePath
+  }
+  const tempPath = path.join(app.getPath('temp'), `voice-clone-sample-${Date.now()}.wav`)
+  await executeFFmpeg(['-y', '-i', samplePath, '-vn', '-ac', '1', '-ar', '16000', tempPath])
+  return tempPath
+}
+
+async function cleanupVoiceCloneSample(samplePath: string, sourcePath: string) {
+  if (samplePath === sourcePath) return
+  await fs.promises.unlink(samplePath).catch(() => undefined)
 }
 
 export default function initIPC() {
@@ -324,15 +341,23 @@ export default function initIPC() {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) throw new Error('无法获取窗口')
       const result = await dialog.showOpenDialog(win, {
-        title: '选择用于克隆的原声音频',
+        title: '选择用于克隆的人声素材（音频或视频）',
         properties: ['openFile'],
-        filters: [{ name: 'Audio files', extensions: ['mp3', 'm4a', 'wav'] }],
+        filters: [
+          {
+            name: '人声素材',
+            extensions: ['mp3', 'm4a', 'wav', 'mp4', 'mov', 'm4v', 'webm'],
+          },
+        ],
       })
       if (result.canceled || !result.filePaths[0]) return null
-      return miniMaxTtsCloneVoice({
-        ...params,
-        samplePath: result.filePaths[0],
-      })
+      const sourcePath = result.filePaths[0]
+      const samplePath = await prepareVoiceCloneSample(sourcePath)
+      try {
+        return await miniMaxTtsCloneVoice({ ...params, samplePath })
+      } finally {
+        await cleanupVoiceCloneSample(samplePath, sourcePath)
+      }
     },
   )
   ipcMain.handle(

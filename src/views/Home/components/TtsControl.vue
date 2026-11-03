@@ -69,7 +69,20 @@
             >
               {{ t('features.tts.config.loadMiniMaxVoices') }}
             </v-btn>
-            <span class="text-caption text-medium-emphasis">{{ minimaxSystemVoices.length }}</span>
+            <v-btn
+              prepend-icon="mdi-account-plus-outline"
+              variant="tonal"
+              size="large"
+              :loading="cloningVoice"
+              :disabled="!appStore.minimaxTtsApiKey?.trim()"
+              @click="handleCloneVoice"
+            >
+              {{ t('features.tts.config.cloneVoice') }}
+            </v-btn>
+            <span class="text-caption text-medium-emphasis">{{ allMiniMaxVoices.length }}</span>
+          </div>
+          <div class="text-caption text-medium-emphasis voice-selection-hint">
+            {{ t('features.tts.config.cloneVoiceHint') }}
           </div>
           <div class="voice-field-grid">
           <v-select
@@ -79,7 +92,7 @@
             :items="minimaxVoiceLanguageItems"
             item-title="label"
             item-value="value"
-            :disabled="minimaxSystemVoices.length === 0"
+            :disabled="allMiniMaxVoices.length === 0"
           />
           <v-text-field
             v-model="minimaxVoiceSearch"
@@ -87,7 +100,7 @@
             :label="t('features.tts.config.minimaxVoiceSearch')"
             prepend-inner-icon="mdi-magnify"
             clearable
-            :disabled="minimaxSystemVoices.length === 0"
+            :disabled="allMiniMaxVoices.length === 0"
           />
           </div>
           <v-autocomplete
@@ -98,9 +111,9 @@
             item-title="voiceName"
             item-value="voiceId"
             :item-props="getMiniMaxVoiceItemProps"
-            :disabled="minimaxSystemVoices.length === 0"
+            :disabled="allMiniMaxVoices.length === 0"
             :no-data-text="
-              minimaxSystemVoices.length
+              allMiniMaxVoices.length
                 ? t('features.tts.config.minimaxVoiceNoMatches')
                 : t('features.tts.config.minimaxVoiceListEmpty')
             "
@@ -191,8 +204,8 @@ const configValid = (text?: string) => {
   }
   if (
     appStore.ttsProvider === 'minimax' &&
-    minimaxSystemVoices.value.length > 0 &&
-    !minimaxSystemVoices.value.some((voice) => voice.voiceId === appStore.minimaxTtsVoiceId)
+    allMiniMaxVoices.value.length > 0 &&
+    !allMiniMaxVoices.value.some((voice) => voice.voiceId === appStore.minimaxTtsVoiceId)
   ) {
     toast.warning(t('features.tts.config.minimaxVoiceRequired'))
     return false
@@ -237,14 +250,27 @@ const getMiniMaxVoiceLanguage = (voice: (typeof minimaxSystemVoices.value)[numbe
   return 'other'
 }
 
+// 克隆音色保存在 MiniMax 账号下，本地只存 voiceId；和系统音色合并成同一个下拉
+const allMiniMaxVoices = computed(() => {
+  const cloned = appStore.minimaxClonedVoices.map((voice) => ({
+    voiceId: voice.voiceId,
+    voiceName: voice.voiceName,
+    description: t('features.tts.config.clonedVoiceTag'),
+  }))
+  const seen = new Set(cloned.map((voice) => voice.voiceId))
+  return [...cloned, ...minimaxSystemVoices.value.filter((voice) => !seen.has(voice.voiceId))]
+})
+
 const filteredMiniMaxVoices = computed(() => {
   const search = minimaxVoiceSearch.value?.trim().toLocaleLowerCase() ?? ''
-  return minimaxSystemVoices.value.filter((voice) => {
+  return allMiniMaxVoices.value.filter((voice) => {
     const voiceText = [voice.voiceId, voice.voiceName, voice.description]
       .join(' ')
       .toLocaleLowerCase()
     const matchesSearch = !search || voiceText.includes(search)
+    const isCloned = appStore.minimaxClonedVoices.some((item) => item.voiceId === voice.voiceId)
     const matchesLanguage =
+      isCloned ||
       minimaxVoiceLanguageFilter.value === 'all' ||
       getMiniMaxVoiceLanguage(voice) === minimaxVoiceLanguageFilter.value
     return matchesSearch && matchesLanguage
@@ -301,10 +327,42 @@ const handleLoadMiniMaxVoices = async () => {
 
 const updateMiniMaxVoiceName = (voiceId: string | null) => {
   appStore.minimaxTtsVoiceName =
-    minimaxSystemVoices.value.find((voice) => voice.voiceId === voiceId)?.voiceName ?? ''
+    allMiniMaxVoices.value.find((voice) => voice.voiceId === voiceId)?.voiceName ?? ''
 }
 
-const getMiniMaxVoiceItemProps = (voice: (typeof minimaxSystemVoices.value)[number]) => ({
+const cloningVoice = ref(false)
+// 克隆只需要做一次：MiniMax 把音色挂在这个 API Key 的账号下，本地记下 voiceId 后一直可选
+const handleCloneVoice = async () => {
+  if (!appStore.minimaxTtsApiKey?.trim()) {
+    toast.warning(t('features.tts.config.cloneVoiceNeedsKey'))
+    return
+  }
+  cloningVoice.value = true
+  try {
+    const result = await window.electron.miniMaxTtsCloneVoice({
+      apiKey: appStore.minimaxTtsApiKey,
+      apiRegion: appStore.minimaxTtsApiRegion,
+      previewText: appStore.tryListeningText?.trim() || '你好，这是克隆后的音色试听。',
+    })
+    if (!result) return
+    const entry = { voiceId: result.voiceId, voiceName: result.voiceName }
+    const existing = appStore.minimaxClonedVoices.findIndex(
+      (voice) => voice.voiceId === entry.voiceId,
+    )
+    if (existing >= 0) appStore.minimaxClonedVoices.splice(existing, 1, entry)
+    else appStore.minimaxClonedVoices.unshift(entry)
+    appStore.minimaxTtsVoiceId = entry.voiceId
+    appStore.minimaxTtsVoiceName = entry.voiceName
+    toast.success(t('features.tts.config.cloneVoiceSuccess', { name: entry.voiceName }))
+  } catch (error: any) {
+    const errorMessage = error?.error?.message || error?.message || error
+    toast.error(t('features.tts.config.cloneVoiceFailed') + ': ' + String(errorMessage))
+  } finally {
+    cloningVoice.value = false
+  }
+}
+
+const getMiniMaxVoiceItemProps = (voice: (typeof allMiniMaxVoices.value)[number]) => ({
   subtitle: voice.description,
 })
 
@@ -441,6 +499,10 @@ const fetchVoices = async () => {
 }
 onMounted(async () => {
   await fetchVoices()
+  // 语言是自由文本；历史值一旦不匹配任何音色，音色列表会一直是空的，这里回退成未选择。
+  if (appStore.language && !appStore.languageList.includes(appStore.language)) {
+    appStore.language = undefined
+  }
   if (!appStore.originalVoicesList.find((voice) => voice.Name === appStore.voice?.Name)) {
     appStore.voice = null
   }

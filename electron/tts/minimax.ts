@@ -71,18 +71,43 @@ export async function getMiniMaxSystemVoices(params: MiniMaxTtsApiParams) {
     throw new Error('MiniMax did not return a system voice list.')
   }
 
-  return systemVoices
-    .filter((voice: any) => typeof voice?.voice_id === 'string' && voice.voice_id.trim())
-    .map((voice: any) => ({
-      voiceId: voice.voice_id.trim(),
-      voiceName:
-        typeof voice.voice_name === 'string' && voice.voice_name.trim()
-          ? voice.voice_name.trim()
-          : voice.voice_id.trim(),
-      description: Array.isArray(voice.description)
-        ? voice.description.filter((item: unknown) => typeof item === 'string').join(' ')
-        : '',
-    }))
+  const mapVoice = (voice: any) => ({
+    voiceId: voice.voice_id.trim(),
+    voiceName:
+      typeof voice.voice_name === 'string' && voice.voice_name.trim()
+        ? voice.voice_name.trim()
+        : voice.voice_id.trim(),
+    description: Array.isArray(voice.description)
+      ? voice.description.filter((item: unknown) => typeof item === 'string').join(' ')
+      : '',
+  })
+  const isValidVoice = (voice: any) =>
+    typeof voice?.voice_id === 'string' && !!voice.voice_id.trim()
+
+  // 克隆音色保存在 MiniMax 账号下，换机器/重装后仍要能看到，所以每次加载都顺带取一次
+  // voice_cloning；这一步失败不影响系统音色列表可用。
+  let clonedVoices: any[] = []
+  try {
+    const clonedResponse = await axios.post(
+      apiUrl + '/get_voice',
+      { voice_type: 'voice_cloning' },
+      {
+        headers: {
+          Authorization: 'Bearer ' + normalizedApiKey,
+          'Content-Type': 'application/json',
+        },
+        timeout: 30_000,
+      },
+    )
+    assertApiSuccess(clonedResponse.data, 'cloned voice list')
+    if (Array.isArray(clonedResponse.data?.voice_cloning)) {
+      clonedVoices = clonedResponse.data.voice_cloning
+    }
+  } catch {
+    clonedVoices = []
+  }
+
+  return [...clonedVoices.filter(isValidVoice), ...systemVoices.filter(isValidVoice)].map(mapVoice)
 }
 
 function abortError() {
