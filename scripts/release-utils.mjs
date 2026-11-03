@@ -24,12 +24,18 @@ export function verifyAssets(release, installers) {
 
 export function publishCompleteRelease({ tag, repo, installers, notesPath, gh }) {
   const api = `repos/${repo}/releases/tags/${encodeURIComponent(tag)}`
-  let release
-  try {
-    release = JSON.parse(gh('api', api))
-  } catch (error) {
-    if (!String(error.stderr).includes('HTTP 404')) throw error
+  const findRelease = () => {
+    try {
+      return JSON.parse(gh('api', api))
+    } catch (error) {
+      if (!String(error.stderr).includes('HTTP 404')) throw error
+      // GitHub's tag endpoint does not expose draft releases. Find drafts by
+      // listing releases so a retry can verify an existing draft safely.
+      const pages = JSON.parse(gh('api', `repos/${repo}/releases?per_page=100`, '--paginate', '--slurp'))
+      return pages.flat().find((item) => item.tag_name === tag && item.draft) ?? null
+    }
   }
+  let release = findRelease()
   // Retries must never rewrite a public release.
   if (!release || release.draft) {
     if (!release) {
@@ -58,11 +64,11 @@ export function publishCompleteRelease({ tag, repo, installers, notesPath, gh })
       repo,
       '--clobber',
     )
-    release = JSON.parse(gh('api', api))
+    release = findRelease()
     verifyAssets(release, installers)
     gh('release', 'edit', tag, '--repo', repo, '--draft=false', '--prerelease=false', '--latest')
   }
-  release = JSON.parse(gh('api', api))
+  release = findRelease()
   verifyAssets(release, installers)
   if (release.draft || release.prerelease || !release.published_at || release.tag_name !== tag) {
     throw new Error('Release is not fully published; documentation hook must not run')

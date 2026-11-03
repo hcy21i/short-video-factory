@@ -22,7 +22,7 @@ test('extracts the exact tag without leaking adjacent versions', () => {
   assert.throws(() => releaseNotes(text, 'v1.3'))
 })
 
-function scenario({ existing = false, incomplete = false, publishFails = false } = {}) {
+function scenario({ existing = false, existingDraft = false, incomplete = false, publishFails = false } = {}) {
   const installers = expectedInstallers('1.3.0').map((name) => ({
     name,
     size: 123,
@@ -35,12 +35,13 @@ function scenario({ existing = false, incomplete = false, publishFails = false }
         draft: false,
         assets: installers.map((f) => ({ ...f, state: 'uploaded' })),
       }
-    : null
+    : existingDraft ? { tag_name: 'v1.3.0', draft: true, assets: [] } : null
   const calls = []
   const gh = (...args) => {
     calls.push(args)
     if (args[0] === 'api') {
-      if (!release) throw Object.assign(new Error('Not Found'), { stderr: 'HTTP 404' })
+      if (args[1].includes('?per_page=100')) return JSON.stringify([[...(release?.draft ? [release] : [])]])
+      if (!release || release.draft) throw Object.assign(new Error('Not Found'), { stderr: 'HTTP 404' })
       return JSON.stringify(release)
     }
     if (args[1] === 'create') release = { tag_name: 'v1.3.0', draft: true, assets: [] }
@@ -91,4 +92,11 @@ test('retries verify public releases without modifying them', () => {
     state.calls.every((args) => args[0] === 'api'),
     true,
   )
+})
+
+test('finds and completes an existing draft when the tag API returns 404', () => {
+  const state = scenario({ existingDraft: true })
+  assert.equal(state.run().draft, false)
+  assert.equal(state.calls.some((args) => args[1] === 'create'), false)
+  assert.equal(state.calls.some((args) => args[1] === 'upload'), true)
 })
