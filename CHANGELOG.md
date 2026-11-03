@@ -4,6 +4,20 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.4.3] - 2026-11-03
+
+<!-- i18n:en:start -->
+### Fixed & Optimized
+
+- Fix MiniMax voice cloning when the uploaded audio file ID is returned as a large integer.
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 修复与优化
+
+- 修复 MiniMax 音色克隆时上传音频编号识别失败的问题。
+<!-- i18n:zh-CN:end -->
+
 ## [v1.4.2] - 2026-11-03
 
 <!-- i18n:en:start -->
