@@ -198,10 +198,15 @@ async function uploadCloneSample(
     },
     maxBodyLength: MAX_CLONE_SAMPLE_SIZE + 1024,
     timeout: 120_000,
+    // MiniMax returns an int64 file_id, which JSON.parse would round before we use it.
+    transformResponse: [(raw: string) => JSON.parse(raw.replace(
+      /"file_id"\s*:\s*([0-9]+)(?=\s*[,}])|"(?:\\.|[^"\\])*"/g,
+      (token, digits: string | undefined) => digits === undefined ? token : token.replace(digits, '"' + digits + '"'),
+    ))],
   })
   assertApiSuccess(response.data, 'voice sample upload')
   const fileId = response.data?.file?.file_id
-  if (typeof fileId !== 'string' || !fileId) {
+  if (typeof fileId !== 'string' || !/^[1-9][0-9]*$/.test(fileId)) {
     throw new Error('MiniMax did not return an uploaded file ID.')
   }
   return fileId
@@ -220,12 +225,12 @@ export async function cloneMiniMaxVoice(
   const { apiUrl } = getMiniMaxEndpoints(params.apiRegion)
   const response = await axios.post(
     apiUrl + '/voice_clone',
-    {
-      file_id: fileId,
+    // Write the validated decimal ID as a JSON integer without rounding it through Number.
+    '{"file_id":' + fileId + ',' + JSON.stringify({
       voice_id: voiceId,
       text: previewText,
       model: TTS_MODEL,
-    },
+    }).slice(1),
     {
       headers: {
         Authorization: 'Bearer ' + apiKey,
