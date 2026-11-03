@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   },
   store: {} as Record<string, unknown>,
   getTextForSynthesis: vi.fn(),
-  getCurrentOutputText: vi.fn(() => 'A generated script'),
+  getCurrentOutputText: vi.fn(() => 'A generated script '.repeat(4).trim()),
   synthesizeSpeech: vi.fn(),
   getVideoSegments: vi.fn(),
   random: {
@@ -33,11 +33,27 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/store', () => ({
   RenderStatus: mocks.RenderStatus,
-  useAppStore: () => mocks.store,
+  useAppStore: () => {
+    mocks.store.voice ??= 'test-voice'
+    mocks.store.videoAssetFolders ??= []
+    mocks.store.agentTargetDurationSeconds ??= 5
+    return mocks.store
+  },
 }))
 vi.mock('i18next-vue', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('vue-toastification', () => ({ useToast: () => mocks.toast }))
 vi.mock('random', () => ({ default: mocks.random }))
+vi.mock('@/views/Home/components/ModelSettings.vue', () => ({
+  default: defineComponent({
+    setup(_, { expose }) {
+      expose({
+        validateSynthesisSettings: () => true,
+        synthesizedSpeechToFile: (options: unknown) => mocks.synthesizeSpeech(options),
+      })
+      return () => null
+    },
+  }),
+}))
 
 const TextGenerateStub = defineComponent({
   setup(_, { expose }) {
@@ -54,16 +70,24 @@ const TextGenerateStub = defineComponent({
 const TtsControlStub = defineComponent({
   setup(_, { expose }) {
     expose({
-    synthesizedSpeechToFile: (options: unknown) => mocks.synthesizeSpeech(options),
-    validateSynthesisSettings: () => true,
-  })
+      synthesizedSpeechToFile: (options: unknown) => mocks.synthesizeSpeech(options),
+      validateSynthesisSettings: () => true,
+    })
     return () => h('div', { 'data-testid': 'tts-control-stub' })
   },
 })
 
 const VideoManageStub = defineComponent({
   setup(_, { expose }) {
-    expose({ getVideoSegments: (options: unknown) => mocks.getVideoSegments(options) })
+    expose({
+      getVideoSegments: (options: unknown) => mocks.getVideoSegments(options),
+      getPreflightSnapshot: () => ({
+        selectedCount: 1,
+        totalCount: 1,
+        reviewed: false,
+        rangeCount: 0,
+      }),
+    })
     return () => h('div', { 'data-testid': 'video-manage-stub' })
   },
 })
@@ -119,7 +143,7 @@ describe('Home video render flow', () => {
         },
         autoBatch: true,
 
-        agentTargetDurationSeconds: 30,
+        agentTargetDurationSeconds: 5,
         renderStatus: mocks.RenderStatus.None,
         updateRenderStatus(status: number) {
           this.renderStatus = status
@@ -175,7 +199,7 @@ describe('Home video render flow', () => {
             exportSubtitles,
             outputSize: { width: 720, height: 1280 },
             outputDuration: '8',
-            outputPath: 'C:/video output/my video.mp4',
+            outputPath: 'C:/video output/my video-001.mp4',
           }),
         )
         expect(mocks.synthesizeSpeech).toHaveBeenCalledWith(
@@ -187,7 +211,7 @@ describe('Home video render flow', () => {
         await flushPromises()
 
         expect(renderVideo).toHaveBeenCalledTimes(1)
-        expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
+        expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(2)
         expect(storeState.renderStatus).toBe(mocks.RenderStatus.None)
         expect(mocks.toast.success).not.toHaveBeenCalled()
         expect(mocks.toast.info).not.toHaveBeenCalledWith('features.render.info.batchNext')
@@ -209,7 +233,7 @@ describe('Home video render flow', () => {
       },
       autoBatch: count > 1,
 
-      agentTargetDurationSeconds: 30,
+      agentTargetDurationSeconds: 5,
       batchConfig: { count, onError: 'stop' },
       batchProgress: null as { running: boolean; completedCount: number } | null,
       renderStatus: mocks.RenderStatus.None,
@@ -218,7 +242,7 @@ describe('Home video render flow', () => {
       },
     })
     const renderDeferred = createDeferred<{ stdout: string; stderr: string; code: number }>()
-    const renderVideo = vi.fn(() => renderDeferred.promise)
+    const renderVideo = vi.fn((_params: { outputPath: string }) => renderDeferred.promise)
     mocks.store = storeState
     mocks.getTextForSynthesis.mockResolvedValue('A generated script')
     mocks.synthesizeSpeech.mockResolvedValue({ duration: 8, srtText: 'subtitle text' })
@@ -256,16 +280,19 @@ describe('Home video render flow', () => {
       await wrapper.find('#render-trigger').trigger('click')
       await vi.waitFor(() => expect(renderVideo).toHaveBeenCalledTimes(1))
       await wrapper.find('#render-trigger').trigger('click')
-      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(2)
       renderDeferred.resolve({ stdout: '', stderr: '', code: 0 })
       await vi.waitFor(() => expect(renderVideo).toHaveBeenCalledTimes(count))
       await vi.waitFor(() => expect(storeState.batchProgress?.running ?? false).toBe(false))
 
       await vi.waitFor(() => expect(storeState.renderStatus).toBe(mocks.RenderStatus.Completed))
       expect(mocks.toast.success).toHaveBeenCalledWith('features.render.success.succeeded')
-      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(count)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(count + 1)
       expect(mocks.synthesizeSpeech).toHaveBeenCalledWith(
-        expect.objectContaining({ text: 'A generated script', withCaption: true }),
+        expect.objectContaining({
+          text: 'A generated script '.repeat(4).trim(),
+          withCaption: true,
+        }),
       )
       expect(mocks.getVideoSegments).toHaveBeenCalledWith({ duration: 8 })
       expect(mocks.getCurrentOutputText.mock.invocationCallOrder[0]).toBeLessThan(
@@ -276,6 +303,17 @@ describe('Home video render flow', () => {
       )
       expect(mocks.getVideoSegments.mock.invocationCallOrder[0]).toBeLessThan(
         renderVideo.mock.invocationCallOrder[0],
+      )
+      expect(
+        renderVideo.mock.calls.map(([params]) => (params as { outputPath: string }).outputPath),
+      ).toEqual(
+        count === 1
+          ? ['C:/video output/success.mp4']
+          : [
+              'C:/video output/success-001.mp4',
+              'C:/video output/success-002.mp4',
+              'C:/video output/success-003.mp4',
+            ],
       )
     } finally {
       wrapper.unmount()
@@ -294,7 +332,7 @@ describe('Home video render flow', () => {
       },
       autoBatch: true,
 
-      agentTargetDurationSeconds: 30,
+      agentTargetDurationSeconds: 5,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status
@@ -343,7 +381,7 @@ describe('Home video render flow', () => {
 
       await vi.waitFor(() => expect(storeState.renderStatus).toBe(mocks.RenderStatus.Failed))
       expect(renderVideo).toHaveBeenCalledTimes(1)
-      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(2)
       expect(mocks.toast.success).not.toHaveBeenCalled()
       expect(mocks.toast.error).toHaveBeenCalledTimes(1)
       expect(consoleError).toHaveBeenCalledTimes(1)
@@ -364,7 +402,7 @@ describe('Home video render flow', () => {
       },
       autoBatch: false,
 
-      agentTargetDurationSeconds: 30,
+      agentTargetDurationSeconds: 5,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status
@@ -451,7 +489,7 @@ describe('Home video render flow', () => {
       },
       autoBatch: true,
 
-      agentTargetDurationSeconds: 30,
+      agentTargetDurationSeconds: 5,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status
@@ -492,7 +530,7 @@ describe('Home video render flow', () => {
       await vi.waitFor(() => expect(storeState.renderStatus).toBe(mocks.RenderStatus.Failed))
 
       expect(renderVideo).not.toHaveBeenCalled()
-      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(1)
+      expect(mocks.getCurrentOutputText).toHaveBeenCalledTimes(2)
       expect(mocks.toast.error).toHaveBeenCalledTimes(1)
     } finally {
       wrapper.unmount()
@@ -514,7 +552,7 @@ describe('Home video render flow', () => {
       },
       autoBatch: true,
 
-      agentTargetDurationSeconds: 30,
+      agentTargetDurationSeconds: 5,
       renderStatus: mocks.RenderStatus.None,
       updateRenderStatus(status: number) {
         this.renderStatus = status

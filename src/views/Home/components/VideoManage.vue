@@ -6,8 +6,12 @@
           <div class="media-library-heading">
             <div class="media-library-mark"><v-icon>mdi-folder-multiple-image</v-icon></div>
             <div class="min-w-0 flex-1">
-              <div class="media-library-title">{{ t('features.workspace.materialCanvasTitle') }}</div>
-              <div class="media-library-subtitle">{{ t('features.workspace.materialCanvasHint') }}</div>
+              <div class="media-library-title">
+                {{ t('features.workspace.materialCanvasTitle') }}
+              </div>
+              <div class="media-library-subtitle">
+                {{ t('features.workspace.materialCanvasHint') }}
+              </div>
             </div>
             <v-chip v-if="videoAssets.length" size="small" color="primary" variant="tonal">
               {{ t('features.workspace.mediaCount', { count: videoAssets.length }) }}
@@ -48,7 +52,9 @@
                 <div class="media-source-location">{{ folder.path }}</div>
               </div>
               <v-chip size="small" variant="tonal">
-                {{ t('features.workspace.mediaCount', { count: getFolderAssets(folder.path).length }) }}
+                {{
+                  t('features.workspace.mediaCount', { count: getFolderAssets(folder.path).length })
+                }}
               </v-chip>
               <v-chip v-if="!isFolderScanned(folder.path)" size="x-small" variant="outlined">
                 {{ t('features.assets.sources.notScanned') }}
@@ -95,6 +101,16 @@
             </v-chip>
           </div>
           <div class="mt-1 text-sm leading-5">{{ latestAnalysis.summary }}</div>
+          <div
+            v-for="scene in latestAnalysis.scenes.filter((item) => item.samples.length)"
+            :key="`${scene.id}-samples`"
+            class="mt-2 text-xs"
+          >
+            <strong>{{ scene.name }}</strong>
+            <div v-for="sample in scene.samples" :key="sample.timeSeconds">
+              {{ sample.timeSeconds.toFixed(1) }}s · {{ sample.description }}
+            </div>
+          </div>
           <div v-if="latestAnalysis.scenes.length" class="mt-2 flex flex-wrap gap-1">
             <v-chip
               v-for="scene in latestAnalysis.scenes.slice(0, 6)"
@@ -133,16 +149,17 @@
           </div>
           <div class="mt-1 text-sm leading-5">{{ reviewSummary }}</div>
           <div v-if="reviewedRangeSummary.length" class="review-range-list mt-2">
-            <div
-              v-for="item in reviewedRangeSummary"
-              :key="item.path"
-              class="review-range-file"
-            >
+            <div v-for="item in reviewedRangeSummary" :key="item.path" class="review-range-file">
               <div class="review-range-file-head">
                 <v-icon size="15">mdi-movie-open-outline</v-icon>
                 <span class="review-range-file-name" :title="item.path">{{ item.name }}</span>
                 <v-chip size="x-small" variant="outlined">
-                  {{ t('features.assets.sources.reviewRangeCount', { count: item.ranges.length, seconds: item.seconds.toFixed(1) }) }}
+                  {{
+                    t('features.assets.sources.reviewRangeCount', {
+                      count: item.ranges.length,
+                      seconds: item.seconds.toFixed(1),
+                    })
+                  }}
                 </v-chip>
                 <v-spacer />
                 <v-btn
@@ -246,17 +263,30 @@
         <div class="media-canvas flex-1 h-0 w-full">
           <div class="media-canvas-heading">
             <div>
-              <div class="media-canvas-title">{{ t('features.assets.sources.selectedMaterials') }}</div>
-              <div class="media-canvas-caption">{{ t('features.assets.sources.selectedMaterialsHint') }}</div>
+              <div class="media-canvas-title">
+                {{ t('features.assets.sources.selectedMaterials') }}
+              </div>
+              <div class="media-canvas-caption">
+                {{ t('features.assets.sources.selectedMaterialsHint') }}
+              </div>
             </div>
             <div class="media-canvas-actions">
               <span class="media-asset-count">
-                {{ t('features.assets.sources.selectionSummary', { selected: selectedAssetPaths.length, total: videoAssets.length }) }}
+                {{
+                  t('features.assets.sources.selectionSummary', {
+                    selected: selectedAssetPaths.length,
+                    total: videoAssets.length,
+                  })
+                }}
               </span>
               <v-btn
                 size="small"
                 variant="text"
-                :disabled="disabled || !videoAssets.length || selectedAssetPaths.length === videoAssets.length"
+                :disabled="
+                  disabled ||
+                  !videoAssets.length ||
+                  selectedAssetPaths.length === videoAssets.length
+                "
                 @click="selectAllAssets"
               >
                 {{ t('features.assets.sources.selectAll') }}
@@ -297,7 +327,9 @@
           </div>
           <div
             v-if="videoAssets.length"
-            class="media-asset-grid w-full max-h-full overflow-y-auto grid grid-cols-2 xl:grid-cols-3 gap-3 p-3"
+            class="media-asset-grid w-full grid grid-cols-2 xl:grid-cols-3 gap-3 p-3"
+            tabindex="0"
+            :aria-label="t('features.assets.sources.selectedMaterials')"
           >
             <div
               class="media-asset-card w-full h-full max-h-[220px]"
@@ -322,7 +354,11 @@
                 color="warning"
                 variant="flat"
               >
-                {{ t('features.assets.sources.reviewBadge', { count: getUnusableRanges(item.path).length }) }}
+                {{
+                  t('features.assets.sources.reviewBadge', {
+                    count: getUnusableRanges(item.path).length,
+                  })
+                }}
               </v-chip>
               <v-chip
                 v-else-if="isAssetAnalyzed(item.path)"
@@ -352,7 +388,9 @@
           <v-btn
             class="media-refresh-button"
             prepend-icon="mdi-magnify-scan"
-            :disabled="disabled || !appStore.videoAssetFolders.length || loadingFolderPaths.length > 0"
+            :disabled="
+              disabled || !appStore.videoAssetFolders.length || loadingFolderPaths.length > 0
+            "
             :loading="scanAllLoading"
             @click="scanAllFolders"
           >
@@ -375,6 +413,7 @@ import VideoAutoPreview from '@/components/VideoAutoPreview.vue'
 import ActionToastEmbed from '@/components/ActionToastEmbed.vue'
 import random from 'random'
 import { formatErrorForCopy } from '@/lib/error-copy'
+import { localFileUrl } from '@/lib/local-file-url'
 import { trackAnalytics } from '@/lib/analytics'
 import {
   analyzeMaterials as analyzeMaterialFrames,
@@ -393,6 +432,8 @@ import {
   pickSegmentFromSpans,
   resizeRangeEdge,
   shiftRange,
+  subtractUsedSpans,
+  type SecondRange,
   type RangeEdge,
 } from '@/lib/agent/shot-ranges'
 
@@ -411,12 +452,15 @@ const loadingFolderPaths = ref<string[]>([])
 const scanAllLoading = ref(false)
 const videoDurationCache = ref(new Map<string, number>())
 const latestAnalysis = ref<MaterialAnalysis | null>(null)
+const analysisAssetPaths = ref<Record<string, string>>({})
 // 素材或勾选状态一变，之前的分析结论就失效，连提示词里的上下文一起清掉
 const resetAnalysis = () => {
   latestAnalysis.value = null
+  analysisAssetPaths.value = {}
   appStore.materialAnalysisContext = ''
 }
-const folderKey = (folderPath: string) => folderPath.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase()
+const folderKey = (folderPath: string) =>
+  folderPath.replace(/\\/g, '/').replace(/\/$/, '').toLowerCase()
 const getFolderAssets = (folderPath: string) => assetsByFolder.value[folderKey(folderPath)] ?? []
 const isFolderScanned = (folderPath: string) =>
   scannedFolderPaths.value.some((path) => folderKey(path) === folderKey(folderPath))
@@ -446,7 +490,10 @@ const reviewedRangeSummary = computed(() =>
     .filter((asset) => getUnusableRanges(asset.path).length)
     .map((asset) => {
       const ranges = getUnusableRanges(asset.path)
-      const seconds = ranges.reduce((sum, range) => sum + (range.endSeconds - range.startSeconds), 0)
+      const seconds = ranges.reduce(
+        (sum, range) => sum + (range.endSeconds - range.startSeconds),
+        0,
+      )
       return {
         path: asset.path,
         name: asset.name,
@@ -454,7 +501,10 @@ const reviewedRangeSummary = computed(() =>
         seconds,
         label: `${asset.name} · ${ranges.length} 段 ${seconds.toFixed(1)}s`,
         detail: ranges
-          .map((range) => `${range.startSeconds.toFixed(1)}-${range.endSeconds.toFixed(1)}s ${range.reason}`)
+          .map(
+            (range) =>
+              `${range.startSeconds.toFixed(1)}-${range.endSeconds.toFixed(1)}s ${range.reason}`,
+          )
           .join('\n'),
       }
     }),
@@ -481,7 +531,16 @@ const selectedVideoAssets = computed(() =>
   videoAssets.value.filter((asset) => isAssetSelected(asset.path)),
 )
 const getFolderName = (folderPath: string) =>
-  folderPath.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || folderPath
+  folderPath
+    .replace(/[\\/]+$/, '')
+    .split(/[\\/]/)
+    .pop() || folderPath
+
+const refreshImportedFolder = async (folderPath: string) => {
+    const folder = appStore.videoAssetFolders.find((item) => folderKey(item.path) === folderKey(folderPath))
+    if (folder) folder.enabled = true
+    return scanFolder(folderPath, { trackSelection: true })
+}
 
 const handleAddFolder = async () => {
   const folderPath = await window.electron.selectFolder({
@@ -503,7 +562,9 @@ const handleAddFolder = async () => {
 }
 
 const setFolderEnabled = (folderPath: string, enabled: boolean | null) => {
-  const folder = appStore.videoAssetFolders.find((item) => folderKey(item.path) === folderKey(folderPath))
+  const folder = appStore.videoAssetFolders.find(
+    (item) => folderKey(item.path) === folderKey(folderPath),
+  )
   if (folder) {
     folder.enabled = enabled === true
     resetAnalysis()
@@ -545,15 +606,20 @@ const scanFolder = async (
     resetAnalysis()
     const assets = await window.electron.listFilesFromFolder({ folderPath })
     const mp4Assets = assets.filter((asset) => asset.name.toLowerCase().endsWith('.mp4'))
+    const previousPaths = new Set(getFolderAssets(folderPath).map((asset) => asset.path))
     videoDurationCache.value.clear()
     assetsByFolder.value = { ...assetsByFolder.value, [key]: mp4Assets }
-    // 新扫到的素材默认勾上，用户再按需取消；已不存在的路径从勾选里剔除
+    // 只自动勾选新素材，保留用户对已有素材的选择，包括暂时禁用的文件夹。
     const scannedPaths = new Set(mp4Assets.map((asset) => asset.path))
-    const knownPaths = new Set(videoAssets.value.map((asset) => asset.path))
-    selectedAssetPaths.value = [...new Set([
-      ...selectedAssetPaths.value.filter((path) => knownPaths.has(path) || scannedPaths.has(path)),
-      ...scannedPaths,
-    ])]
+    const knownPaths = new Set(Object.values(assetsByFolder.value).flat().map((asset) => asset.path))
+    selectedAssetPaths.value = [
+      ...new Set([
+        ...selectedAssetPaths.value.filter(
+          (path) => knownPaths.has(path) || scannedPaths.has(path),
+        ),
+        ...[...scannedPaths].filter((path) => !previousPaths.has(path)),
+      ]),
+    ]
     analyzedAssetPaths.value = analyzedAssetPaths.value.filter((path) => scannedPaths.has(path))
     scannedFolderPaths.value = [...new Set([...scannedFolderPaths.value, folderPath])]
     if (options.trackSelection) {
@@ -563,7 +629,11 @@ const scanFolder = async (
         count_bucket: getAssetCountBucket(mp4Assets.length),
       })
     }
-    console.info('素材文件夹扫描完成', { folderPath, assetCount: assets.length, mp4Count: mp4Assets.length })
+    console.info('素材文件夹扫描完成', {
+      folderPath,
+      assetCount: assets.length,
+      mp4Count: mp4Assets.length,
+    })
     if (mp4Assets.length) {
       if (!options.quiet) toast.success(t('features.assets.success.loadSucceeded'))
     } else if (!options.quiet) {
@@ -605,7 +675,8 @@ const scanFolder = async (
 }
 
 const scanAllFolders = async () => {
-  if (scanAllLoading.value || loadingFolderPaths.value.length || !appStore.videoAssetFolders.length) return
+  if (scanAllLoading.value || loadingFolderPaths.value.length || !appStore.videoAssetFolders.length)
+    return
   scanAllLoading.value = true
   try {
     const results = await Promise.all(
@@ -652,10 +723,6 @@ const readVideoDuration = (assetPath: string) => {
 
   return new Promise<number>((resolve, reject) => {
     const video = document.createElement('video')
-    const normalizedPath = assetPath.replace(/\\/g, '/')
-    const src = normalizedPath.startsWith('/')
-      ? `file://${normalizedPath}`
-      : `file:///${normalizedPath}`
     const timeout = window.setTimeout(() => {
       cleanup()
       reject(new Error('读取视频元数据超时'))
@@ -689,13 +756,8 @@ const readVideoDuration = (assetPath: string) => {
     video.preload = 'metadata'
     video.addEventListener('loadedmetadata', onLoaded)
     video.addEventListener('error', onError)
-    video.src = encodeURI(src)
+    video.src = localFileUrl(assetPath)
   })
-}
-
-const fileUrl = (assetPath: string) => {
-  const normalizedPath = assetPath.replace(/\\/g, '/')
-  return normalizedPath.startsWith('/') ? `file://${normalizedPath}` : `file:///${normalizedPath}`
 }
 
 // ratio 是取帧位置：0.5 取正中间（给文案分析用），废镜头检测会按时间轴传多个位置
@@ -778,7 +840,7 @@ const captureFrameAt = (
     video.addEventListener('loadeddata', onFrameReady)
     video.addEventListener('seeked', onFrameReady)
     video.addEventListener('error', onError)
-    video.src = encodeURI(fileUrl(asset.path))
+    video.src = localFileUrl(asset.path)
   })
 
 // 先分析、再写文案：只分析勾选出来的素材，结论既显示在面板里，也写进 store 供文案提示词使用。
@@ -805,7 +867,8 @@ const analyzeSelectedAssets = async () => {
       ? [...selected]
       : Array.from(
           { length: maximumSamples },
-          (_, index) => selected[Math.round((index * (selected.length - 1)) / (maximumSamples - 1))],
+          (_, index) =>
+            selected[Math.round((index * (selected.length - 1)) / (maximumSamples - 1))],
         ).filter((asset): asset is ListFilesFromFolderRecord => Boolean(asset))
   const frames: MaterialFrame[] = []
 
@@ -817,10 +880,21 @@ const analyzeSelectedAssets = async () => {
         name: asset.name,
       }
       try {
-        const captured = await captureFrameAt(asset, controller.signal)
-        frame.image = captured.image
-        frame.durationSeconds = captured.durationSeconds
-        videoDurationCache.value.set(asset.path, captured.durationSeconds)
+        frame.samples = []
+        for (const [sampleIndex, ratio] of [0.2, 0.5, 0.8].entries()) {
+          const captured = await captureFrameAt(asset, controller.signal, ratio)
+          frame.durationSeconds = captured.durationSeconds
+          frame.image ??= captured.image
+          frame.samples.push({
+            id: `${frame.id}-F${sampleIndex + 1}`,
+            timeSeconds: Math.min(
+              captured.durationSeconds * ratio,
+              Math.max(0, captured.durationSeconds - 0.1),
+            ),
+            image: captured.image,
+          })
+          videoDurationCache.value.set(asset.path, captured.durationSeconds)
+        }
       } catch (error) {
         if ((error as { name?: string })?.name === 'AbortError') throw error
         // 取不到画面时仍然把文件名交给模型，避免整次分析因为一条素材失败而中断
@@ -839,28 +913,30 @@ const analyzeSelectedAssets = async () => {
       abortSignal: controller.signal,
     })
     latestAnalysis.value = analysis
-  const assetsById = new Map<string, string>()
-  frames.forEach((frame, index) => {
-    const path = sampleAssets[index]?.path
-    if (path) assetsById.set(frame.id, path)
-  })
-  const preferredAssetPaths = [
-    ...analysis.recommendedOrder.flatMap((id) => {
-      const path = assetsById.get(id)
-      return path ? [path] : []
-    }),
-    ...selected.map((asset) => asset.path)
-      .filter((path) => !analysis.recommendedOrder.some((id) => assetsById.get(id) === path)),
-  ]
-  const promptContext = [
-    analysis.summary,
-    ...analysis.scenes.map(
-      (scene) =>
-        `${scene.name}: ${scene.description}${scene.keywords.length ? `（${scene.keywords.join('、')}）` : ''}`,
-    ),
-  ]
-    .filter(Boolean)
-    .join('\n')
+    const assetsById = new Map<string, string>()
+    frames.forEach((frame, index) => {
+      const path = sampleAssets[index]?.path
+      if (path) assetsById.set(frame.id, path)
+    })
+    analysisAssetPaths.value = Object.fromEntries(assetsById)
+    const preferredAssetPaths = [
+      ...analysis.recommendedOrder.flatMap((id) => {
+        const path = assetsById.get(id)
+        return path ? [path] : []
+      }),
+      ...selected
+        .map((asset) => asset.path)
+        .filter((path) => !analysis.recommendedOrder.some((id) => assetsById.get(id) === path)),
+    ]
+    const promptContext = [
+      analysis.summary,
+      ...analysis.scenes.map(
+        (scene) =>
+          `${scene.name}: ${scene.description}${scene.keywords.length ? `（${scene.keywords.join('、')}）` : ''}`,
+      ),
+    ]
+      .filter(Boolean)
+      .join('\n')
 
     // 写进 store，文案生成时会作为“画面里有什么”的前提拼进提示词
     appStore.materialAnalysisContext = promptContext
@@ -871,9 +947,10 @@ const analyzeSelectedAssets = async () => {
     toast.success(t('features.assets.sources.analyzeSucceeded'))
   } catch (error) {
     if ((error as { name?: string })?.name === 'AbortError') return
-    const detail = (error as { error?: { message?: string }; message?: string })?.error?.message
-      || (error as Error)?.message
-      || String(error)
+    const detail =
+      (error as { error?: { message?: string }; message?: string })?.error?.message ||
+      (error as Error)?.message ||
+      String(error)
     toast.error({
       component: {
         render: () =>
@@ -968,7 +1045,11 @@ const reviewSelectedShots = async () => {
     const next = new Map<string, UnusableRange[]>()
     Object.entries(review.unusableByMaterial).forEach(([id, ranges]) => {
       const path = pathById.get(id)
-      if (path && ranges.length) next.set(path, ranges.map((range) => ({ ...range })))
+      if (path && ranges.length)
+        next.set(
+          path,
+          ranges.map((range) => ({ ...range })),
+        )
     })
     unusableRangesByPath.value = next
     // 留一份模型原话，手动微调后可以逐文件还原
@@ -977,13 +1058,15 @@ const reviewSelectedShots = async () => {
     )
     reviewSummary.value = review.summary
     const totalRanges = [...next.values()].reduce((sum, ranges) => sum + ranges.length, 0)
-    if (totalRanges) toast.success(t('features.assets.sources.reviewSucceeded', { count: totalRanges }))
+    if (totalRanges)
+      toast.success(t('features.assets.sources.reviewSucceeded', { count: totalRanges }))
     else toast.info(t('features.assets.sources.reviewClean'))
   } catch (error) {
     if ((error as { name?: string })?.name === 'AbortError') return
-    const detail = (error as { error?: { message?: string }; message?: string })?.error?.message
-      || (error as Error)?.message
-      || String(error)
+    const detail =
+      (error as { error?: { message?: string }; message?: string })?.error?.message ||
+      (error as Error)?.message ||
+      String(error)
     toast.error({
       component: {
         render: () =>
@@ -1036,12 +1119,7 @@ const resolveAssetDuration = async (assetPath: string) => {
   }
 }
 
-const onRangeInput = async (
-  assetPath: string,
-  index: number,
-  edge: RangeEdge,
-  event: Event,
-) => {
+const onRangeInput = async (assetPath: string, index: number, edge: RangeEdge, event: Event) => {
   const input = event.target as HTMLInputElement | null
   const value = Number(input?.value)
   if (!Number.isFinite(value)) return
@@ -1077,7 +1155,10 @@ const canResetFileReview = (assetPath: string) =>
 const resetFileReview = (assetPath: string) => {
   const original = originalUnusableRangesByPath.value.get(assetPath)
   if (!original?.length) return
-  writeUnusableRanges(assetPath, original.map((range) => ({ ...range })))
+  writeUnusableRanges(
+    assetPath,
+    original.map((range) => ({ ...range })),
+  )
 }
 
 // 抽帧确认：起、中、止三帧摊开，看这段到底该不该剪
@@ -1085,7 +1166,11 @@ const rangePreviewOpen = ref(false)
 const previewingRange = ref(false)
 const previewKey = ref('')
 const rangePreview = ref<{ label: string; frames: { label: string; src: string }[] } | null>(null)
-const previewFrameUrl = async (asset: ListFilesFromFolderRecord, ratio: number, signal: AbortSignal) => {
+const previewFrameUrl = async (
+  asset: ListFilesFromFolderRecord,
+  ratio: number,
+  signal: AbortSignal,
+) => {
   const captured = await captureFrameAt(asset, signal, ratio, { longerSide: 640, quality: 0.78 })
   return URL.createObjectURL(new Blob([captured.image], { type: 'image/jpeg' }))
 }
@@ -1103,14 +1188,26 @@ const previewUnusableRange = async (assetPath: string, index: number) => {
     if (!duration) throw new Error(t('features.assets.errors.videoDurationInvalid'))
     const span = Math.max(0.2, range.endSeconds - range.startSeconds)
     const points = [
-      { label: `${range.startSeconds.toFixed(1)}s · ${t('features.assets.sources.reviewRangePreviewStart')}`, time: range.startSeconds + Math.min(0.3, span / 3) },
-      { label: `${((range.startSeconds + range.endSeconds) / 2).toFixed(1)}s · ${t('features.assets.sources.reviewRangePreviewMiddle')}`, time: (range.startSeconds + range.endSeconds) / 2 },
-      { label: `${range.endSeconds.toFixed(1)}s · ${t('features.assets.sources.reviewRangePreviewEnd')}`, time: range.endSeconds - Math.min(0.3, span / 3) },
+      {
+        label: `${range.startSeconds.toFixed(1)}s · ${t('features.assets.sources.reviewRangePreviewStart')}`,
+        time: range.startSeconds + Math.min(0.3, span / 3),
+      },
+      {
+        label: `${((range.startSeconds + range.endSeconds) / 2).toFixed(1)}s · ${t('features.assets.sources.reviewRangePreviewMiddle')}`,
+        time: (range.startSeconds + range.endSeconds) / 2,
+      },
+      {
+        label: `${range.endSeconds.toFixed(1)}s · ${t('features.assets.sources.reviewRangePreviewEnd')}`,
+        time: range.endSeconds - Math.min(0.3, span / 3),
+      },
     ]
     const frames: { label: string; src: string }[] = []
     for (const point of points) {
       const ratio = Math.min(1, Math.max(0, point.time / duration))
-      frames.push({ label: point.label, src: await previewFrameUrl(asset, ratio, controller.signal) })
+      frames.push({
+        label: point.label,
+        src: await previewFrameUrl(asset, ratio, controller.signal),
+      })
     }
     rangePreview.value = { label: `${asset.name} · ${range.reason}`, frames }
   } catch (error) {
@@ -1128,7 +1225,10 @@ const getPreflightSnapshot = () => ({
   selectedCount: selectedVideoAssets.value.length,
   totalCount: videoAssets.value.length,
   reviewed: Boolean(reviewSummary.value),
-  rangeCount: [...unusableRangesByPath.value.values()].reduce((sum, ranges) => sum + ranges.length, 0),
+  rangeCount: [...unusableRangesByPath.value.values()].reduce(
+    (sum, ranges) => sum + ranges.length,
+    0,
+  ),
 })
 
 const clearReview = () => {
@@ -1171,6 +1271,7 @@ const getVideoSegments = async (options: { duration: number; preferredAssetPaths
   })
   let tempVideoAssets = [...orderedVideoAssets]
   const unreadableAssetPaths = new Set<string>()
+  const usedByPath = new Map<string, SecondRange[]>()
   let unreadableAssetCount = 0
   const unreadableAssetSamples: string[] = []
   const formatTimestamp = (milliseconds: number) => (milliseconds / 1000).toFixed(3)
@@ -1189,21 +1290,26 @@ const getVideoSegments = async (options: { duration: number; preferredAssetPaths
     }
   }
 
-  while (currentTotalDurationMs < targetDurationMs) {
+  // FFmpeg 输出使用毫秒精度，最后不足一帧的余量无需再抽取一个镜头。
+  while (targetDurationMs - currentTotalDurationMs > 1) {
     // 如果素材库中没有剩余素材，时长还不够，重新来一轮
     if (tempVideoAssets.length === 0) {
       tempVideoAssets = orderedVideoAssets.filter((asset) => !unreadableAssetPaths.has(asset.path))
       if (!tempVideoAssets.length) {
         reportUnreadableAssets()
-        throw new Error(t('features.assets.errors.noUsableVideoAssets'))
+        throw new Error(
+          t(
+            segments.videoFiles.length
+              ? 'features.assets.errors.insufficientUniqueVideo'
+              : 'features.assets.errors.noUsableVideoAssets',
+          ),
+        )
       }
       continue
     }
 
     // 先按素材分析顺序剪辑；没有 Agent 推荐顺序时继续随机选取。
-    const randomAssetIndex = preferredOrder.length
-      ? 0
-      : random.int(0, tempVideoAssets.length - 1)
+    const randomAssetIndex = preferredOrder.length ? 0 : random.int(0, tempVideoAssets.length - 1)
     const [randomAsset] = tempVideoAssets.splice(randomAssetIndex, 1)
     if (!randomAsset) {
       continue
@@ -1230,7 +1336,10 @@ const getVideoSegments = async (options: { duration: number; preferredAssetPaths
     const remainingDurationMs = targetDurationMs - currentTotalDurationMs
     // 合成时跳过笑场/NG：先把不可用区间从整条素材里减掉，只在剩下的空档里取镜头
     const unusableRanges = appStore.skipUnusableShots ? getUnusableRanges(randomAsset.path) : []
-    const allowedSpans = buildAllowedSpans(randomAssetDurationMs / 1000, unusableRanges)
+    const allowedSpans = subtractUsedSpans(
+      buildAllowedSpans(randomAssetDurationMs / 1000, unusableRanges),
+      usedByPath.get(randomAsset.path) ?? [],
+    )
     const pickedSegment = pickSegmentFromSpans(allowedSpans, {
       remainingSeconds: remainingDurationMs / 1000,
       minSeconds: minSegmentDurationMs / 1000,
@@ -1239,18 +1348,23 @@ const getVideoSegments = async (options: { duration: number; preferredAssetPaths
     })
     if (!pickedSegment) {
       unreadableAssetPaths.add(randomAsset.path)
-      recordUnreadableAsset(randomAsset.name, '可用画面已全部被剔除')
+      recordUnreadableAsset(randomAsset.name, '可用画面已用完或被剔除')
       continue
     }
 
-    segments.videoFiles.push(randomAsset.path)
-    segments.timeRanges.push([
-      formatTimestamp(pickedSegment.startSeconds * 1000),
-      formatTimestamp(pickedSegment.endSeconds * 1000),
+    const startMs = Math.ceil(pickedSegment.startSeconds * 1000)
+    const endMs = Math.floor(pickedSegment.endSeconds * 1000)
+    if (endMs <= startMs) {
+      unreadableAssetPaths.add(randomAsset.path)
+      continue
+    }
+    usedByPath.set(randomAsset.path, [
+      ...(usedByPath.get(randomAsset.path) ?? []),
+      { startSeconds: startMs / 1000, endSeconds: endMs / 1000 },
     ])
-    currentTotalDurationMs += Math.round(
-      (pickedSegment.endSeconds - pickedSegment.startSeconds) * 1000,
-    )
+    segments.videoFiles.push(randomAsset.path)
+    segments.timeRanges.push([formatTimestamp(startMs), formatTimestamp(endMs)])
+    currentTotalDurationMs += endMs - startMs
   }
 
   reportUnreadableAssets()
@@ -1272,6 +1386,13 @@ const getVideoSegments = async (options: { duration: number; preferredAssetPaths
 
 defineExpose({
   getVideoSegments,
+  refreshImportedFolder,
+  getStoryboardMaterials: () => selectedVideoAssets.value.map((asset) => {
+    const scene = latestAnalysis.value?.mode === 'visual'
+      ? latestAnalysis.value.scenes.find((item) => analysisAssetPaths.value[item.id] === asset.path)
+      : undefined
+    return { path: asset.path, name: asset.name, samples: scene?.samples ?? [], keywords: scene?.keywords ?? [] }
+  }),
   analyzeSelectedAssets,
   reviewSelectedShots,
   getPreflightSnapshot,
@@ -1334,6 +1455,7 @@ defineExpose({
   justify-content: space-between;
   gap: 0.8rem;
 }
+
 
 .media-source-heading {
   min-width: 0;
@@ -1442,6 +1564,10 @@ defineExpose({
 }
 
 .media-asset-grid {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   align-content: start;
 }
 
@@ -1458,7 +1584,9 @@ defineExpose({
   border: 1px solid rgba(var(--v-border-color), 0.72);
   border-radius: 10px;
   background: rgb(var(--v-theme-surface));
-  transition: opacity 0.15s ease, border-color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    border-color 0.15s ease;
 }
 
 // 未勾选的素材压暗，但仍然可点，避免误以为文件被删了

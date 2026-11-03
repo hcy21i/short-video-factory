@@ -64,6 +64,12 @@ contextBridge.exposeInMainWorld('electron', {
   openDirectory: (folderPath: string) => ipcRenderer.invoke('open-directory', folderPath),
   listFilesFromFolder: (params: ListFilesFromFolderParams) =>
     ipcRenderer.invoke('list-files-from-folder', params),
+  importVideoLink: (params: { url: string; folder: string }) => ipcRenderer.invoke('import-video-link', params),
+  onImportVideoProgress: (listener: (percent: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, percent: string) => listener(percent)
+    ipcRenderer.on('import-video-progress', handler)
+    return () => ipcRenderer.off('import-video-progress', handler)
+  },
   edgeTtsGetVoiceList: () => ipcRenderer.invoke('edge-tts-get-voice-list'),
   edgeTtsSynthesizeToBase64: (params: EdgeTtsSynthesizeCommonParams) =>
     ipcRenderer.invoke('edge-tts-synthesize-to-base64', params),

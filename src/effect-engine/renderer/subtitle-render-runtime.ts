@@ -8,11 +8,35 @@ export function buildSubtitleLayout(params: {
   videoWidth: number
   measure: (text: string, fontSize: number) => number
 }): SubtitleLayoutCue[] {
-  return params.cues.map((cue) => ({
+  const initialLayout = params.cues.map((cue) => ({
     ...cue,
     ...autoLineBreak({
       text: cue.text,
       style: params.style,
+      videoWidth: params.videoWidth,
+      measure: params.measure,
+    }),
+  }))
+
+  if (!initialLayout.length) return initialLayout
+
+  // A separate auto-fit decision for every cue makes the font visibly jump between
+  // long and short subtitles. Pick the smallest size required by the timeline, then
+  // reflow every cue at that shared size so typography stays stable across cuts.
+  const sharedFontSize = Math.min(...initialLayout.map((cue) => cue.fontSize))
+  if (initialLayout.every((cue) => cue.fontSize === sharedFontSize)) return initialLayout
+
+  const sharedStyle = {
+    ...params.style,
+    fontSize: sharedFontSize,
+    minFontSize: sharedFontSize,
+  }
+
+  return params.cues.map((cue) => ({
+    ...cue,
+    ...autoLineBreak({
+      text: cue.text,
+      style: sharedStyle,
       videoWidth: params.videoWidth,
       measure: params.measure,
     }),

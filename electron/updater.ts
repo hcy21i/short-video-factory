@@ -6,7 +6,7 @@ import { getMetadataState, refreshMetadata } from './metadata/runtime'
 import type { MetadataClientContext, MetadataState } from './metadata/types'
 import type { Release, UpdateNotesOverride, UpdatePolicy } from './metadata/schema'
 
-const APP_HOMEPAGE = 'https://short-video-factory.yils.blog/'
+const APP_HOMEPAGE = 'https://github.com/hcy21i/short-video-factory/releases'
 
 export interface UpdateNotesOverrideInfo {
   mode: UpdateNotesOverride['mode']

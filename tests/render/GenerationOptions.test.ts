@@ -27,7 +27,7 @@ const setup = () => {
       renderStubDefaultSlot: true,
     },
   })
-  return { store, wrapper, chips: wrapper.findAllComponents({ name: 'VChip' }) }
+  return { store, wrapper, chips: wrapper.findAll('button[aria-pressed]') }
 }
 
 describe('subtitle option chips', () => {
@@ -53,7 +53,7 @@ describe('subtitle option chips', () => {
       }
       await chips[2].trigger('click')
       expect(store.autoBatch).toBe(false)
-      expect(chips[2].attributes('disabled')).toBe('true')
+      expect(chips[2].attributes()).toHaveProperty('disabled')
       const progress = wrapper.findComponent({ name: 'VProgressLinear' })
       expect(progress.attributes('model-value')).toBe('20')
       expect(wrapper.text()).toContain('features.render.batch.progress')
@@ -70,16 +70,15 @@ describe('subtitle option chips', () => {
     const { store, wrapper, chips } = setup()
     try {
       expect(chips).toHaveLength(3)
-      expect(chips[0].attributes('color')).toBe('primary')
       expect(chips[0].attributes('aria-pressed')).toBe('true')
-      expect(chips[1].attributes('color')).toBe('grey')
+      expect(chips[1].attributes('aria-pressed')).toBe('false')
       await chips[0].trigger('click')
       expect(store.renderConfig.subtitlesEnabled).toBe(false)
       expect(store.renderConfig.exportSubtitles).toBe(false)
       await chips[1].trigger('click')
       expect(store.renderConfig.exportSubtitles).toBe(true)
       expect(store.renderConfig.subtitlesEnabled).toBe(false)
-      expect(chips[0].attributes('color')).toBe('grey')
+      expect(chips[0].attributes('aria-pressed')).toBe('false')
       expect(chips[1].attributes('aria-pressed')).toBe('true')
       await chips[2].trigger('click')
       expect(store.autoBatch).toBe(true)
@@ -100,8 +99,8 @@ describe('subtitle option chips', () => {
       await chips[0].trigger('click')
       await chips[1].trigger('click')
       await chips[2].trigger('click')
-      expect(chips[0].attributes('disabled')).toBe('true')
-      expect(chips[1].attributes('disabled')).toBe('true')
+      expect(chips[0].attributes()).toHaveProperty('disabled')
+      expect(chips[1].attributes()).toHaveProperty('disabled')
       expect(store.renderConfig.subtitlesEnabled).toBe(true)
       expect(store.renderConfig.exportSubtitles).toBe(false)
       expect(store.autoBatch).toBe(false)

@@ -153,6 +153,8 @@ import { useToast } from 'vue-toastification'
 import ActionToastEmbed from '@/components/ActionToastEmbed.vue'
 import { copyErrorToClipboard } from '@/lib/error-copy'
 import { generateDiverseCopywriting, type GenerationPhase } from '@/lib/llm/generate-diverse'
+import { generateCopywriting } from '@/lib/llm/generate'
+import { estimateSpeechSeconds, isDurationOnTarget } from '@/lib/preflight'
 import { buildPlatformGuidance } from '@/lib/llm/platform-rules'
 import { getErrorDetail } from '@/lib/llm/security'
 import type { LlmConfig } from '@/lib/llm/types'
@@ -326,7 +328,35 @@ const handleGenerate = async (options?: {
       },
     })
     if (currentRequestId !== requestId.value) return ''
-    outputText.value = result.text
+    let finalText = result.text
+    const targetSeconds = Number(appStore.agentTargetDurationSeconds)
+    if (result.status === 'completed' && targetSeconds > 0 && !isDurationOnTarget(estimateSpeechSeconds(finalText), targetSeconds)) {
+      generationPhase.value = 'rewriting'
+      try {
+        const rewritten = await generateCopywriting({
+          llmConfig: requestConfig,
+          copywritingConfig: structuredClone(toRaw(appStore.copywritingConfig)),
+          prompt: `${generationPrompt}\n\n请将下面的口播文案改写到约 ${targetSeconds} 秒。保留用户要求、关键信息与事实，不添加未经证实的内容。只输出完整口播正文。\n\n原文：\n${finalText}`,
+          abortSignal: controller.signal,
+          onRequestStart: () => { requestCount += 1 },
+          onUsage: (usage) => {
+            usageCount += 1
+            if (usage.inputTokens === undefined) inputTokensKnown = false
+            else inputTokens += usage.inputTokens
+            if (usage.outputTokens === undefined) outputTokensKnown = false
+            else outputTokens += usage.outputTokens
+          },
+        })
+        if (currentRequestId !== requestId.value || controller.signal.aborted) return ''
+        if (rewritten.status === 'completed' && rewritten.text.trim() &&
+          Math.abs(estimateSpeechSeconds(rewritten.text) - targetSeconds) < Math.abs(estimateSpeechSeconds(finalText) - targetSeconds)) finalText = rewritten.text
+      } catch (error) {
+        if (controller.signal.aborted) throw error
+      }
+      if (!isDurationOnTarget(estimateSpeechSeconds(finalText), targetSeconds) && !options?.noToast)
+        toast.warning(t('features.llm.info.durationMismatch'))
+    }
+    outputText.value = finalText
     appStore.updateCopywritingStatus(result.status)
     emit('history-updated')
     if (result.similarityWarning && !options?.noToast)
@@ -348,7 +378,7 @@ const handleGenerate = async (options?: {
       return ''
     }
     outcome = 'success'
-    return result.text
+    return finalText
   } catch (error) {
     if (currentRequestId !== requestId.value) return ''
     outcome = controller.signal.aborted ? 'cancelled' : 'failed'

@@ -35,6 +35,7 @@ import { setupEffectRendererFrameWriter } from './effect-engine/export-task-mana
 import { getMetadataState } from './metadata/runtime'
 import { validateExternalHttpsUrl } from './lib/external-url'
 import { openDirectory } from './lib/open-directory'
+import { downloadVideo } from './lib/video-import'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let windowMaximizedByApp = false
@@ -273,6 +274,15 @@ export default function initIPC() {
   })
 
   // 读取文件夹内所有文件
+  ipcMain.handle('import-video-link', async (event, params: { url: string; folder: string }) => {
+    const frame = event.senderFrame
+    if (!frame || frame !== event.sender.mainFrame) throw new Error('不可信的请求来源')
+    const senderUrl = new URL(frame.url)
+    if (VITE_DEV_SERVER_URL ? senderUrl.origin !== new URL(VITE_DEV_SERVER_URL).origin : senderUrl.protocol !== 'file:') throw new Error('不可信的请求来源')
+    if (typeof params?.url !== 'string' || typeof params?.folder !== 'string') throw new Error('请求参数无效')
+    await downloadVideo(params.url, params.folder, (percent) => event.sender.send('import-video-progress', percent))
+  })
+
   ipcMain.handle('list-files-from-folder', async (_event, params: ListFilesFromFolderParams) => {
     const files = await fs.promises.readdir(params.folderPath, { withFileTypes: true })
     return files

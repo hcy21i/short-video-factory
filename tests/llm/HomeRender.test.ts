@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   },
   store: {} as Record<string, unknown>,
   getTextForSynthesis: vi.fn(),
+  synthesizeSpeech: vi.fn(),
   toast: {
     error: vi.fn(),
     info: vi.fn(),
@@ -30,11 +31,25 @@ vi.mock('@/store', () => ({
 }))
 vi.mock('i18next-vue', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('vue-toastification', () => ({ useToast: () => mocks.toast }))
+vi.mock('@/views/Home/components/ModelSettings.vue', () => ({
+  default: defineComponent({
+    setup(_, { expose }) {
+      expose({ validateSynthesisSettings: () => true, synthesizedSpeechToFile: () => mocks.synthesizeSpeech() })
+      return () => null
+    },
+  }),
+}))
 
 const TextGenerateStub = defineComponent({
   setup(_, { expose }) {
-    expose({ getTextForSynthesis: () => mocks.getTextForSynthesis() })
+    expose({ getCurrentOutputText: () => 'A generated script '.repeat(4), getTextForSynthesis: () => mocks.getTextForSynthesis() })
     return () => h('div', { 'data-testid': 'text-generate-stub' })
+  },
+})
+const VideoManageStub = defineComponent({
+  setup(_, { expose }) {
+    expose({ getPreflightSnapshot: () => ({ selectedCount: 1, totalCount: 1, reviewed: false, rangeCount: 0 }) })
+    return () => null
   },
 })
 
@@ -46,7 +61,7 @@ const VideoRenderStub = defineComponent({
   },
 })
 
-describe('Home render batch failure handling', () => {
+describe('Home render batch TTS failure handling', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getTextForSynthesis.mockReset()
@@ -68,6 +83,9 @@ describe('Home render batch failure handling', () => {
           outputFileExt: '.mp4',
         },
         autoBatch: true,
+        voice: 'test-voice',
+        videoAssetFolders: [],
+        agentTargetDurationSeconds: 5,
         batchConfig: { count, onError },
         renderStatus: mocks.RenderStatus.None,
         updateRenderStatus(status: number) {
@@ -75,7 +93,7 @@ describe('Home render batch failure handling', () => {
         },
       })
       mocks.store = storeState
-      mocks.getTextForSynthesis.mockRejectedValue(new Error('Generation failed'))
+      mocks.synthesizeSpeech.mockRejectedValue(new Error('Synthesis failed'))
       Object.defineProperty(window, 'electron', {
         configurable: true,
         value: {
@@ -89,11 +107,12 @@ describe('Home render batch failure handling', () => {
         global: {
           stubs: {
             TextGenerate: TextGenerateStub,
-            VideoManage: true,
+            VideoManage: VideoManageStub,
             TtsControl: true,
             VideoRender: VideoRenderStub,
             GenerationOptions: true,
             TopBar: true,
+            LinkImport: true,
           },
         },
       })
@@ -102,7 +121,7 @@ describe('Home render batch failure handling', () => {
         await wrapper.find('#render-trigger').trigger('click')
         await flushPromises()
 
-        expect(mocks.getTextForSynthesis).toHaveBeenCalledTimes(attempts)
+        await vi.waitFor(() => expect(mocks.synthesizeSpeech).toHaveBeenCalledTimes(attempts))
         expect(storeState.renderStatus).toBe(mocks.RenderStatus.Failed)
         expect(mocks.toast.error).toHaveBeenCalledTimes(attempts)
         expect(consoleError).toHaveBeenCalledTimes(attempts)

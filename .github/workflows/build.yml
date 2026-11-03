@@ -16,7 +16,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     env:
-      ANALYTICS_DISTRIBUTION_CHANNEL: official
+      ANALYTICS_DISTRIBUTION_CHANNEL: self_build
 
     strategy:
       fail-fast: false

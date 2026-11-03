@@ -5,7 +5,26 @@ import {
   pickSegmentFromSpans,
   resizeRangeEdge,
   shiftRange,
+  subtractUsedSpans,
 } from '@/lib/agent/shot-ranges'
+
+describe('subtractUsedSpans', () => {
+  it('excludes previously used portions while preserving the unused intervals', () => {
+    expect(
+      subtractUsedSpans(
+        [{ startSeconds: 0, endSeconds: 20 }],
+        [
+          { startSeconds: 3, endSeconds: 7 },
+          { startSeconds: 10, endSeconds: 15 },
+        ],
+      ),
+    ).toEqual([
+      { startSeconds: 0, endSeconds: 3 },
+      { startSeconds: 7, endSeconds: 10 },
+      { startSeconds: 15, endSeconds: 20 },
+    ])
+  })
+})
 
 describe('normalizeUnusableRanges', () => {
   it('裁剪到素材时长内并按开始时间排序', () => {
@@ -123,24 +142,28 @@ describe('pickSegmentFromSpans', () => {
 
 describe('resizeRangeEdge', () => {
   it('拖开始端不会越过结束端，至少留 0.3 秒', () => {
-    expect(
-      resizeRangeEdge({ startSeconds: 4, endSeconds: 6 }, 'startSeconds', 5.9, 10),
-    ).toEqual({ startSeconds: 5.7, endSeconds: 6 })
+    expect(resizeRangeEdge({ startSeconds: 4, endSeconds: 6 }, 'startSeconds', 5.9, 10)).toEqual({
+      startSeconds: 5.7,
+      endSeconds: 6,
+    })
   })
 
   it('拖结束端不会越过开始端，也不会超出素材时长', () => {
-    expect(
-      resizeRangeEdge({ startSeconds: 4, endSeconds: 6 }, 'endSeconds', 0, 10),
-    ).toEqual({ startSeconds: 4, endSeconds: 4.3 })
-    expect(
-      resizeRangeEdge({ startSeconds: 4, endSeconds: 6 }, 'endSeconds', 99, 10),
-    ).toEqual({ startSeconds: 4, endSeconds: 10 })
+    expect(resizeRangeEdge({ startSeconds: 4, endSeconds: 6 }, 'endSeconds', 0, 10)).toEqual({
+      startSeconds: 4,
+      endSeconds: 4.3,
+    })
+    expect(resizeRangeEdge({ startSeconds: 4, endSeconds: 6 }, 'endSeconds', 99, 10)).toEqual({
+      startSeconds: 4,
+      endSeconds: 10,
+    })
   })
 
   it('负值与 NaN 都夹到 0，不当成无穷大', () => {
-    expect(
-      resizeRangeEdge({ startSeconds: 2, endSeconds: 6 }, 'startSeconds', -5, 10),
-    ).toEqual({ startSeconds: 0, endSeconds: 6 })
+    expect(resizeRangeEdge({ startSeconds: 2, endSeconds: 6 }, 'startSeconds', -5, 10)).toEqual({
+      startSeconds: 0,
+      endSeconds: 6,
+    })
     expect(
       resizeRangeEdge({ startSeconds: 2, endSeconds: 6 }, 'endSeconds', Number.NaN, 10),
     ).toEqual({ startSeconds: 2, endSeconds: 2.3 })

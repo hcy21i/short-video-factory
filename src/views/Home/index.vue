@@ -28,14 +28,14 @@
               type="button"
               class="sidebar-nav-item"
               :class="{ 'sidebar-nav-item-active': activePage === item.id }"
-              :title="t(item.labelKey)"
+              :title="navText(item.labelKey)"
               :aria-current="activePage === item.id ? 'page' : undefined"
               @click="navigateToPage(item.id)"
             >
               <span class="sidebar-nav-icon"><v-icon size="19">{{ item.icon }}</v-icon></span>
               <span class="sidebar-nav-copy">
-                <span class="sidebar-nav-title">{{ t(item.labelKey) }}</span>
-                <span class="sidebar-nav-hint">{{ t(item.hintKey) }}</span>
+                <span class="sidebar-nav-title">{{ navText(item.labelKey) }}</span>
+                <span class="sidebar-nav-hint">{{ navText(item.hintKey) }}</span>
               </span>
               <span v-if="activePage === item.id" class="sidebar-nav-indicator" aria-hidden="true"></span>
             </button>
@@ -60,8 +60,8 @@
         <header class="page-header">
           <div class="min-w-0">
             <div class="page-eyebrow">{{ t('features.workspace.studioLabel') }}</div>
-            <h1 class="page-title">{{ t(activePageTitleKey) }}</h1>
-            <p class="page-description">{{ t(activePageDescriptionKey) }}</p>
+            <h1 class="page-title">{{ navText(activePageTitleKey) }}</h1>
+            <p class="page-description">{{ navText(activePageDescriptionKey) }}</p>
           </div>
           <div class="page-header-actions">
             <v-chip v-if="activePage === 'workbench'" class="page-context-chip" prepend-icon="mdi-cellphone-link" variant="tonal">
@@ -87,6 +87,7 @@
               @open-model-settings="openCopywritingSettings"
               @history-updated="refreshModelHistory"
             />
+            <StoryboardSuggestions :rows="storyboardRows" :materials="storyboardMaterials" :stale="storyboardStale" @generate="generateStoryboard" @select="selectStoryboardMaterial" @timing="setStoryboardTiming" />
           </div>
 
           <aside class="studio-inspector">
@@ -164,6 +165,9 @@
           </aside>
         </section>
 
+        <section v-show="activePage === 'link-import'" class="page-view content-page">
+          <LinkImport :disabled="agentWorkflowBusy" @imported="(folder) => VideoManageInstance?.refreshImportedFolder(folder)" />
+        </section>
         <section v-show="activePage === 'materials'" class="page-view content-page materials-page">
           <VideoManage ref="VideoManageInstance" :disabled="agentWorkflowBusy" />
         </section>
@@ -260,6 +264,9 @@ import ModelSettings from './components/ModelSettings.vue'
 import VideoRender from './components/VideoRender.vue'
 import GenerationOptions from './components/GenerationOptions.vue'
 import PreflightChecklist from './components/PreflightChecklist.vue'
+import LinkImport from './components/LinkImport.vue'
+import StoryboardSuggestions from './components/StoryboardSuggestions.vue'
+import { splitScriptSentences } from '@/lib/agent/script-sentences'
 
 import { computed, h, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { RenderStatus, useAppStore } from '@/store'
@@ -281,9 +288,17 @@ import {
 const toast = useToast()
 const appStore = useAppStore()
 const { t } = useTranslation()
+const navText = (key: string) => {
+  const value = t(key) as string
+  if (value !== key || !key.endsWith('.linkImport')) return value
+  const english = (appStore.locale || navigator.language).toLowerCase().startsWith('en')
+  if (key.includes('pageHints')) return english ? 'Download video into your library' : '下载视频并导入素材库'
+  if (key.includes('pageDescriptions')) return english ? 'Paste a video link and choose a destination folder.' : '粘贴视频链接并选择保存位置。'
+  return english ? 'Import link' : '链接导入'
+}
 const isMac = window.electron.platform === 'darwin'
 const hasRenderStatus = (status: RenderStatus) => appStore.renderStatus === status
-type AppPage = 'workbench' | 'materials' | 'models' | 'voice' | 'export'
+type AppPage = 'workbench' | 'materials' | 'models' | 'voice' | 'export' | 'link-import'
 type ModelSettingsTab = 'analysis' | 'copywriting' | 'tts'
 const activePage = ref<AppPage>('materials')
 const navigationGroups: {
@@ -295,6 +310,7 @@ const navigationGroups: {
     id: 'creation',
     labelKey: 'features.workspace.navigationGroups.creation',
     items: [
+      { id: 'link-import', icon: 'mdi-link-variant', labelKey: 'features.workspace.pages.linkImport', hintKey: 'features.workspace.pageHints.linkImport' },
       {
         id: 'materials',
         icon: 'mdi-folder-multiple-image',
@@ -334,8 +350,8 @@ const navigationGroups: {
     ],
   },
 ]
-const activePageTitleKey = computed(() => `features.workspace.pageTitles.${activePage.value}`)
-const activePageDescriptionKey = computed(() => `features.workspace.pageDescriptions.${activePage.value}`)
+const activePageTitleKey = computed(() => `features.workspace.pageTitles.${activePage.value === 'link-import' ? 'linkImport' : activePage.value}`)
+const activePageDescriptionKey = computed(() => `features.workspace.pageDescriptions.${activePage.value === 'link-import' ? 'linkImport' : activePage.value}`)
 const ModelSettingsInstance = ref<InstanceType<typeof ModelSettings> | null>(null)
 const modelSettingsSection = computed(() => (activePage.value === 'voice' ? 'voice' : 'models'))
 const agentWorkflowBusy = computed(
@@ -667,6 +683,45 @@ onBeforeUnmount(() => {
 
 // 渲染合成视频
 const TextGenerateInstance = ref<InstanceType<typeof TextGenerate> | null>()
+type StoryboardMaterial = { path: string; name: string; keywords: string[]; samples: { timeSeconds: number; description: string }[] }
+type StoryboardRow = { sentence: string; path: string; description: string; timeSeconds?: number; startSeconds: number; endSeconds: number }
+const storyboardMaterials = ref<StoryboardMaterial[]>([])
+const storyboardRows = ref<StoryboardRow[]>([])
+const storyboardSource = ref('')
+const storyboardSignature = () => JSON.stringify({ text: TextGenerateInstance.value?.getCurrentOutputText()?.trim() ?? '', materials: VideoManageInstance.value?.getStoryboardMaterials() ?? [] })
+const storyboardStale = computed(() => !!storyboardRows.value.length && storyboardSource.value !== storyboardSignature())
+const generateStoryboard = () => {
+  const text = TextGenerateInstance.value?.getCurrentOutputText()?.trim() ?? ''
+  storyboardMaterials.value = VideoManageInstance.value?.getStoryboardMaterials() ?? []
+  storyboardRows.value = splitScriptSentences(text).map((sentence) => {
+    const chars = sentence.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase()
+    const pairs = Array.from({ length: Math.max(0, chars.length - 1) }, (_, index) => chars.slice(index, index + 2))
+    let bestScore = 0
+    let row: StoryboardRow = { sentence, path: '', description: '', startSeconds: 0, endSeconds: 0 }
+    for (const material of storyboardMaterials.value) {
+      for (const sample of material.samples) {
+        const description = `${sample.description} ${material.keywords.join(' ')}`.toLowerCase()
+        const score = pairs.filter((pair) => description.includes(pair)).length
+        if (score > bestScore) {
+          bestScore = score
+          row = { sentence, path: material.path, description: sample.description, timeSeconds: sample.timeSeconds, startSeconds: sample.timeSeconds, endSeconds: sample.timeSeconds }
+        }
+      }
+    }
+    return row
+  })
+  storyboardSource.value = storyboardSignature()
+}
+const selectStoryboardMaterial = (index: number, path: string) => {
+  const row = storyboardRows.value[index]
+  if (!row) return
+  const sample = storyboardMaterials.value.find((material) => material.path === path)?.samples[0]
+  storyboardRows.value[index] = { sentence: row.sentence, path, description: sample?.description ?? '', timeSeconds: sample?.timeSeconds, startSeconds: sample?.timeSeconds ?? 0, endSeconds: sample?.timeSeconds ?? 0 }
+}
+const setStoryboardTiming = (index: number, startSeconds: number, endSeconds: number) => {
+  const row = storyboardRows.value[index]
+  if (row) storyboardRows.value[index] = { ...row, startSeconds, endSeconds }
+}
 const VideoManageInstance = ref<InstanceType<typeof VideoManage> | null>()
 const openModelSettings = async (tab: ModelSettingsTab) => {
   activePage.value = tab === 'tts' ? 'voice' : 'models'
@@ -1061,6 +1116,12 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
     }
     appStore.updateRenderStatus(RenderStatus.Rendering)
     enterStage('export')
+    const outputFileName = batch
+      ? `${appStore.renderConfig.outputFileName}-${String(batch.current).padStart(
+          Math.max(3, String(batch.total).length),
+          '0',
+        )}${appStore.renderConfig.outputFileExt}`
+      : appStore.renderConfig.outputFileName + appStore.renderConfig.outputFileExt
     const renderResult = await window.electron.renderVideo({
       ...videoSegments,
       audioFiles: {
@@ -1074,11 +1135,7 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
         height: appStore.renderConfig.outputSize.height,
       },
       outputDuration: String(ttsResult.duration),
-      outputPath:
-        appStore.renderConfig.outputPath.replace(/\\/g, '/') +
-        '/' +
-        appStore.renderConfig.outputFileName +
-        appStore.renderConfig.outputFileExt,
+      outputPath: appStore.renderConfig.outputPath.replace(/\\/g, '/') + '/' + outputFileName,
     })
 
     // 取消会让主进程返回 code 255；不能将它当作完成并继续自动批处理。
@@ -1422,6 +1479,7 @@ const handleCancelRender = () => {
   min-width: 0;
   min-height: 0;
   height: 100%;
+  overflow-y: auto;
 }
 
 .studio-inspector {

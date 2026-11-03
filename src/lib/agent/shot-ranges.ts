@@ -73,6 +73,28 @@ export const buildAllowedSpans = (
   return spans
 }
 
+/** 从可用画面中扣除本次成片已经使用的区间。 */
+export const subtractUsedSpans = (spans: SecondRange[], used: SecondRange[]): SecondRange[] => {
+  let remaining = spans.map((span) => ({ ...span }))
+  for (const block of used) {
+    remaining = remaining.flatMap((span) => {
+      if (block.endSeconds <= span.startSeconds || block.startSeconds >= span.endSeconds)
+        return [span]
+      return [
+        {
+          startSeconds: span.startSeconds,
+          endSeconds: Math.min(span.endSeconds, block.startSeconds),
+        },
+        {
+          startSeconds: Math.max(span.startSeconds, block.endSeconds),
+          endSeconds: span.endSeconds,
+        },
+      ].filter((part) => part.endSeconds - part.startSeconds >= MIN_USABLE_SPAN_SECONDS)
+    })
+  }
+  return remaining
+}
+
 /** 编辑剔除区间时，最短保留多少秒：太短的区间没意义，也容易手滑删成 0 */
 export const MIN_RANGE_SPAN_SECONDS = 0.3
 
@@ -118,7 +140,10 @@ export const shiftRange = (
   const duration = Math.max(0, Number(durationSeconds) || 0)
   const span = Math.max(0, range.endSeconds - range.startSeconds)
   const delta = Number(deltaSeconds) || 0
-  const startSeconds = Math.min(Math.max(0, range.startSeconds + delta), Math.max(0, duration - span))
+  const startSeconds = Math.min(
+    Math.max(0, range.startSeconds + delta),
+    Math.max(0, duration - span),
+  )
   return { startSeconds, endSeconds: Math.min(duration, startSeconds + span) }
 }
 
@@ -138,13 +163,12 @@ export const pickSegmentFromSpans = (
 ): SecondRange | null => {
   const { remainingSeconds, minSeconds, maxSeconds, randomFloat } = options
   if (!Number.isFinite(remainingSeconds) || remainingSeconds <= 0) return null
-  const usable = spans.filter((span) => span.endSeconds - span.startSeconds >= MIN_USABLE_SPAN_SECONDS)
+  const usable = spans.filter(
+    (span) => span.endSeconds - span.startSeconds >= MIN_USABLE_SPAN_SECONDS,
+  )
   if (!usable.length) return null
 
-  const totalWeight = usable.reduce(
-    (sum, span) => sum + (span.endSeconds - span.startSeconds),
-    0,
-  )
+  const totalWeight = usable.reduce((sum, span) => sum + (span.endSeconds - span.startSeconds), 0)
   let cursor = randomFloat(0, totalWeight)
   let span = usable[usable.length - 1]
   for (const candidate of usable) {

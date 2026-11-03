@@ -4,6 +4,34 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.4.1] - 2026-11-03
+
+<!-- i18n:en:start -->
+### Added
+
+- Import public video links into a material folder, including an anonymous Douyin adapter. Other platforms require yt-dlp installed separately.
+- Show editable storyboard suggestions based on material analysis.
+
+### Fixed & Optimized
+
+- Prevent batch exports from overwriting each other and improve subtitle sizing and Edge TTS reliability.
+- Improve spoken-script guidance, material selection, and handling of special characters in file names.
+- Point release checks to this repository and keep fork analytics separate from the upstream project.
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 新增
+
+- 支持通过链接导入公开视频素材，并提供抖音免登录适配；其他平台需要单独安装 yt-dlp。
+- 根据素材分析提供可编辑的分镜建议。
+
+### 修复与优化
+
+- 修复批量导出文件互相覆盖的问题，改进字幕大小和 Edge TTS 稳定性。
+- 优化口播文案、素材选择和包含特殊字符的文件路径处理。
+- 更新检查指向本仓库，副本版本不向上游项目发送统计事件。
+<!-- i18n:zh-CN:end -->
+
 ## [v1.4.0] - 2026-11-02
 
 <!-- i18n:en:start -->

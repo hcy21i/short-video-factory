@@ -1,4 +1,5 @@
 import { SynthesisOptions } from '../lib/edge-tts'
+import type { TimedSentence } from '../../src/lib/agent/sentence-timing'
 
 export interface EdgeTtsSynthesizeCommonParams {
   text: string
@@ -19,6 +20,7 @@ export interface EdgeTtsSynthesizeToFileResult {
    */
   duration: number | undefined
   srtText?: string
+  timedSentences?: TimedSentence[]
 }
 
 export type MiniMaxApiRegion = 'china' | 'global'
@@ -47,6 +49,7 @@ export interface MiniMaxTtsSynthesizeToFileParams extends MiniMaxTtsSynthesizeCo
 export interface MiniMaxTtsSynthesizeToFileResult {
   duration: number | undefined
   srtText?: string
+  timedSentences?: TimedSentence[]
 }
 
 export interface MiniMaxTtsCloneVoiceParams {

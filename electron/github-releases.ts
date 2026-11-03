@@ -3,7 +3,7 @@ import { compare, prerelease, valid } from 'semver'
 import { z } from 'zod'
 import type { ReleaseChannel } from './metadata/types'
 
-const GITHUB_API_BASE_URL = 'https://api.github.com/repos/YILS-LIN/short-video-factory'
+const GITHUB_API_BASE_URL = 'https://api.github.com/repos/hcy21i/short-video-factory'
 const REQUEST_TIMEOUT_MS = 10000
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 const MAX_RELEASE_NOTES_LENGTH = 100000

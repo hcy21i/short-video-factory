@@ -117,7 +117,7 @@ export default defineConfig(({ mode, command }) => {
   const metadataConfig = JSON.stringify({
     environment,
     apiBaseUrl: validateMetadataBaseUrl(configuredBaseUrl, environment),
-    appId: 'short-video-factory',
+    appId: 'hcy21i-short-video-factory',
     releaseChannel,
     distributionChannel,
     buildId,

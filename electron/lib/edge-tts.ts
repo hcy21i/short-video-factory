@@ -474,25 +474,39 @@ class SynthesisResultImpl implements SynthesisResult {
   getCaptionSrtString(): string {
     let srtCaptionList: SubtitleNodeList = []
     let currentSentence: WordBoundary[] = []
+    const maxCaptionDisplayUnits = 42
+    const maxCaptionDurationMs = 4000
 
     const isNoSpaceScript = (char: string): boolean => {
       const regex = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
       return regex.test(char)
     }
 
+    const joinCaptionWords = (words: WordBoundary[]) => {
+      return words
+        .map((word) => word.text.Text)
+        .reduce((acc, text, index) => {
+          if (index === 0) return text
+          const prevChar = acc[acc.length - 1]
+          const currChar = text[0]
+          const prevIsCompact = isNoSpaceScript(prevChar)
+          const currIsCompact = isNoSpaceScript(currChar)
+          return acc + (prevIsCompact && currIsCompact ? '' : ' ') + text
+        }, '')
+    }
+
+    const getDisplayUnits = (text: string) => {
+      return Array.from(text).reduce((total, char) => {
+        if (/\s/u.test(char)) return total + 0.5
+        return total + (isNoSpaceScript(char) ? 2 : 1)
+      }, 0)
+    }
+
     function pushSrtNode() {
+      if (!currentSentence.length) return
       const firstWord = currentSentence[0]
       const lastWord = currentSentence[currentSentence.length - 1]
-
-      const textList = currentSentence.map((sentence) => sentence.text.Text)
-      const joinedText = textList.reduce((acc, text, index) => {
-        if (index === 0) return text
-        const prevChar = acc[acc.length - 1]
-        const currChar = text[0]
-        const prevIsCompact = isNoSpaceScript(prevChar)
-        const currIsCompact = isNoSpaceScript(currChar)
-        return acc + (prevIsCompact && currIsCompact ? '' : ' ') + text
-      }, '')
+      const joinedText = joinCaptionWords(currentSentence)
 
       srtCaptionList.push({
         type: 'cue',
@@ -505,14 +519,21 @@ class SynthesisResultImpl implements SynthesisResult {
     }
 
     this.wordList.forEach((word, index) => {
-      // const tooLong = () =>
-      //   currentSentence.map((sentence) => sentence.text.Text).join('').length > 24
+      const firstWord = currentSentence[0]
+      const previousWord = this.wordList[index - 1]
+      const hasSpeechGap =
+        Boolean(previousWord) &&
+        word.Offset - (previousWord.Offset + previousWord.Duration) > 100 * 10 ** 4
+      const candidateText = joinCaptionWords([...currentSentence, word])
+      const exceedsReadableLength = getDisplayUnits(candidateText) > maxCaptionDisplayUnits
+      const exceedsReadableDuration =
+        Boolean(firstWord) &&
+        (word.Offset + word.Duration - firstWord.Offset) / 10 ** 4 > maxCaptionDurationMs
 
-      const vocieGap = () =>
-        word.Offset - (this.wordList[index - 1].Offset + this.wordList[index - 1].Duration) >
-        100 * 10 ** 4
-
-      if (index !== 0 && vocieGap()) {
+      if (
+        currentSentence.length &&
+        (hasSpeechGap || exceedsReadableLength || exceedsReadableDuration)
+      ) {
         pushSrtNode()
         currentSentence = [word]
         return

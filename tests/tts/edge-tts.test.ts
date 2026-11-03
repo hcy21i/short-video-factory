@@ -162,4 +162,54 @@ describe('EdgeTTS cancellation', () => {
     await expect(operation).resolves.toMatchObject({ getSize: expect.any(Function) })
     expect(consoleDebug).not.toHaveBeenCalled()
   })
+
+  it('splits uninterrupted long speech into readable subtitle cues', async () => {
+    const edgeTts = new EdgeTTS()
+    const operation = edgeTts.synthesize(
+      'This simple all in one fresh air unit introduces fresh outdoor air indoors and improves your indoor air quality',
+      'en-US-Test',
+    )
+
+    await vi.waitFor(() => expect(mocks.instances).toHaveLength(1))
+    const socket = mocks.instances[0]
+    socket.emit('open')
+
+    const words =
+      'This simple all in one fresh air unit introduces fresh outdoor air indoors and improves your indoor air quality'.split(
+        ' ',
+      )
+    words.forEach((word, index) => {
+      socket.emit(
+        'message',
+        Buffer.from(
+          `Path:audio.metadata\r\n${JSON.stringify({
+            Metadata: [
+              {
+                Type: 'WordBoundary',
+                Data: {
+                  Offset: index * 300 * 10_000,
+                  Duration: 250 * 10_000,
+                  text: { Text: word, Length: word.length, BoundaryType: 'WordBoundary' },
+                },
+              },
+            ],
+          })}`,
+        ),
+      )
+    })
+
+    const audioChunk = Buffer.alloc(640)
+    for (let offset = 0; offset < audioChunk.length; offset += 4) {
+      audioChunk.set([0xff, 0xfb, 0x90, 0x64], offset)
+    }
+    socket.emit('message', Buffer.concat([Buffer.from('Path:audio\r\n'), audioChunk]))
+    socket.emit('message', Buffer.from('Path:turn.end\r\n'))
+    socket.emit('close', 1000, Buffer.from(''))
+
+    const result = await operation
+    const srt = result.getCaptionSrtString()
+    expect(srt.match(/-->/g)?.length).toBeGreaterThan(1)
+    expect(srt).toContain('This simple')
+    expect(srt).toContain('indoor air quality')
+  })
 })

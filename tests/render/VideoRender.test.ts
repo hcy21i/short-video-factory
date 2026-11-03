@@ -76,6 +76,7 @@ describe('VideoRender configuration drafts', () => {
     const store = useAppStore(pinia)
     store.renderConfig = {
       ...store.renderConfig,
+      outputFileName: 'original',
       outputSize: reactive({ width: 720, height: 1280 }),
     }
     expect(isProxy(toRaw(store.renderConfig).outputSize)).toBe(true)
@@ -84,9 +85,9 @@ describe('VideoRender configuration drafts', () => {
     })
     try {
       const fields = wrapper.findAllComponents({ name: 'VTextField' })
-      expect(fields[0].attributes('modelvalue')).toBe('720')
-      fields[0].vm.$emit('update:modelValue', 1080)
-      expect(store.renderConfig.outputSize.width).toBe(720)
+      expect(fields[0].attributes('modelvalue')).toBe('original')
+      fields[0].vm.$emit('update:modelValue', 'draft')
+      expect(store.renderConfig.outputFileName).toBe('original')
 
       // Subtitle settings now live in their own panel. Opening the config
       // dialog must pick up changes made there instead of restoring stale values.

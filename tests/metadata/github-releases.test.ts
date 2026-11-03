@@ -18,7 +18,7 @@ describe('GitHub release fallback', () => {
       releaseDate: '2026-10-09T12:00:00Z',
     })
     expect(request).toHaveBeenCalledWith(
-      'https://api.github.com/repos/YILS-LIN/short-video-factory/releases/latest',
+      'https://api.github.com/repos/hcy21i/short-video-factory/releases/latest',
     )
   })
 
@@ -36,7 +36,7 @@ describe('GitHub release fallback', () => {
       fallbackReleaseNotes: 'Beta 10',
     })
     expect(request).toHaveBeenCalledWith(
-      'https://api.github.com/repos/YILS-LIN/short-video-factory/releases?per_page=100',
+      'https://api.github.com/repos/hcy21i/short-video-factory/releases?per_page=100',
     )
   })
 

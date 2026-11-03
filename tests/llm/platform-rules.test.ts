@@ -42,9 +42,11 @@ describe('buildPlatformGuidance', () => {
   })
 
   it('英文平台不混入中文口播节奏要求', () => {
-    const guidance = buildPlatformGuidance({ platform: 'tiktok' })
+    const guidance = buildPlatformGuidance({ platform: 'tiktok', durationSeconds: 60 })
     expect(guidance).toContain('TikTok')
     expect(guidance).toContain('Hook in the first 3 seconds')
+    expect(guidance).toContain('英文约 120–144 词')
+    expect(guidance).toContain('concrete details only when provided')
   })
 
   it('默认走去营销化口气，并逐条列出禁用的话术', () => {

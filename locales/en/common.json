@@ -165,6 +165,7 @@
       },
       "pages": {
         "workbench": "Creator studio",
+        "linkImport": "Import link",
         "materials": "Media library",
         "models": "AI models",
         "voice": "Voice studio",
@@ -172,6 +173,7 @@
       },
       "pageHints": {
         "workbench": "Shape and edit your narration",
+        "linkImport": "Download video into your library",
         "materials": "Organize clips and analyze scenes",
         "models": "Configure vision and writing models",
         "voice": "Choose a service, voice, and preview",
@@ -179,6 +181,7 @@
       },
       "pageTitles": {
         "workbench": "Creator studio",
+        "linkImport": "Import link",
         "materials": "Media library",
         "models": "AI models",
         "voice": "Voice studio",
@@ -186,6 +189,7 @@
       },
       "pageDescriptions": {
         "workbench": "Bring your brief, materials, and voice into one workflow. Draft the narration, then let the Agent build the video.",
+        "linkImport": "Paste a video link and choose a destination folder.",
         "materials": "Import storyboard clips, browse the footage, and review the scenes the Agent can use.",
         "models": "Configure the vision and writing models, choose a provider preset, and test the connection.",
         "voice": "Choose Edge TTS or MiniMax, set the speed, and preview the voice with your own text.",
@@ -246,7 +250,7 @@
         },
         "review": {
           "label": "Broken-take check",
-          "notReviewed": "Not checked yet — laughing/blurred takes may ship",
+          "notReviewed": "Optional: you can render without checking; laughing or blurred takes may appear",
           "reviewedWithRanges": "{{count}} range(s) marked, skipped while rendering",
           "reviewedClean": "Checked, nothing to cut",
           "skipped": "Skip toggle is off, so those ranges won't be cut"
@@ -381,6 +385,7 @@
         "checkingSimilarity": "Checking similarity with recent copy…",
         "rewritingSimilarCopy": "This script is similar to recent copy. Trying a different angle…",
         "similarityRemains": "The script is still similar to recent copy. Consider changing the prompt or editing it.",
+        "durationMismatch": "The script was revised but its estimated duration still differs from the target. Please review and edit it.",
         "similarityRewriteFailed": "The diversity rewrite did not finish; the first draft was kept."
       },
       "status": {
@@ -564,6 +569,7 @@
         "audioDurationInvalid": "Audio duration is invalid. Please check the speech synthesis result or audio file",
         "noVideoAssets": "No available video assets. Please select an assets folder containing MP4 videos",
         "noUsableVideoAssets": "No readable video assets. Check whether the files are corrupted or use a supported codec",
+        "insufficientUniqueVideo": "Not enough unique footage for the narration. Add footage, shorten the script, or adjust excluded ranges.",
         "durationInsufficient": "Total available video assets duration is insufficient",
         "noSelectedAssets": "No clips selected yet. Tick the ones you want to use in the library.",
         "analyzeFailed": "Material analysis failed",

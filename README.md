@@ -70,7 +70,7 @@
 - 🌐 **多语言支持**：支持中文、英文等多种语言，满足不同用户需求
 - 📦 **开箱即用**：无需复杂配置，用户可以快速上手
 - 📈 **持续更新**：定期发布新版本，修复bug并添加新功能
-- 🔒 **安全可靠**：完全本地本地化运行，确保用户数据安全
+- 🔒 **本地素材**：素材文件保存在本地；使用在线模型、在线配音或链接导入时会连接相应服务
 - 🎨 **用户友好**：简洁直观的用户界面，易于操作
 - 💻 **多平台支持**：支持Windows、macOS和Linux等多个操作系统
 
@@ -78,9 +78,15 @@
 
 ## 🚀 开始使用
 
-前往 [Github Release](https://github.com/YILS-LIN/short-video-factory/releases) 下载最新版本
+前往 [GitHub Release](https://github.com/hcy21i/short-video-factory/releases) 下载本仓库发布的版本
 
 前往 [官方文档](https://short-video-factory.yils.blog) 查看使用手册
+
+### 链接导入素材
+
+在「链接导入」中粘贴公开视频链接或分享文字，并选择已添加到素材库的文件夹。抖音链接使用免登录适配器；其他支持的平台需要先从 [yt-dlp 官方安装说明](https://github.com/yt-dlp/yt-dlp#installation)安装 yt-dlp，并确保应用启动时能在系统 PATH 中找到 `yt-dlp`。更改 PATH 后请重新启动应用。
+
+能否下载取决于视频是否公开、平台限制和网络环境，部分链接即使能在浏览器观看也可能无法导入。应用不会自动读取浏览器登录信息。
 
 <p align="right">(<a href="#readme-top">返回顶部</a>)</p>
 

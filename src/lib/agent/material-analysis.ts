@@ -8,6 +8,7 @@ export interface MaterialFrame {
   name: string
   durationSeconds?: number
   image?: Uint8Array
+  samples?: { id: string; timeSeconds: number; image: Uint8Array }[]
 }
 
 export interface MaterialScene {
@@ -15,6 +16,7 @@ export interface MaterialScene {
   name: string
   description: string
   keywords: string[]
+  samples: { timeSeconds: number; description: string }[]
 }
 
 export interface MaterialAnalysis {
@@ -33,7 +35,7 @@ const isVisionCompatibilityError = (error: unknown) => {
   )
 }
 
-const parseAnalysis = (text: string, materials: MaterialFrame[]): MaterialAnalysis => {
+export const parseAnalysis = (text: string, materials: MaterialFrame[]): MaterialAnalysis => {
   const fallbackSummary = text
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
@@ -78,6 +80,20 @@ const parseAnalysis = (text: string, materials: MaterialFrame[]): MaterialAnalys
                   .map((keyword) => keyword.trim().slice(0, 40))
                   .filter(Boolean)
                   .slice(0, 8)
+              : [],
+            samples: Array.isArray(value.samples)
+              ? value.samples.flatMap((entry): { timeSeconds: number; description: string }[] => {
+                  if (!entry || typeof entry !== 'object') return []
+                  const sample = entry as Record<string, unknown>
+                  const original = material.samples?.find((item) => item.id === sample.id)
+                  const description =
+                    typeof sample.description === 'string'
+                      ? sample.description.trim().slice(0, 240)
+                      : ''
+                  return original && description
+                    ? [{ timeSeconds: original.timeSeconds, description }]
+                    : []
+                })
               : [],
           },
         ]
@@ -125,7 +141,7 @@ const buildPrompt = (
     `Write all natural-language analysis fields in ${language}.`,
     'For each supplied clip frame, infer only visible, relevant scene details. Do not invent objects or actions that are not visible.',
     'Choose a coherent recommended order that can support a short narrated story. Use only the provided material IDs.',
-    'Return only JSON with this shape: {"summary":"overall useful story and visual themes","recommendedOrder":["M01"],"materials":[{"id":"M01","description":"visible scene","keywords":["keyword"]}]}.',
+    'Describe each labeled sample individually. A sample is a still image at a point in time, not proof of what happens between frames. Return only JSON: {"summary":"overall visual themes","recommendedOrder":["M01"],"materials":[{"id":"M01","description":"visible scene","keywords":["keyword"],"samples":[{"id":"M01-F1","description":"visible details at this point"}]}]}. Use only supplied sample IDs; do not invent details.',
     `Material inventory:\n${inventory}`,
     'A labeled image follows each sampled video in the same order as the inventory.',
   ].join('\n\n')
@@ -138,11 +154,17 @@ const createUserContent = (materials: MaterialFrame[], includeImages: boolean) =
   if (includeImages) {
     for (const material of materials) {
       if (!material.image) continue
-      content.push({
-        type: 'text',
-        text: `Frame for ${material.id} (${material.name}):`,
-      })
-      content.push({ type: 'image', image: material.image, mediaType: 'image/jpeg' })
+      if (!material.samples?.length) {
+        content.push({ type: 'text', text: `Frame for ${material.id} (${material.name}):` })
+        content.push({ type: 'image', image: material.image, mediaType: 'image/jpeg' })
+      }
+      for (const sample of material.samples ?? []) {
+        content.push({
+          type: 'text',
+          text: `Sample ${sample.id} at ${sample.timeSeconds.toFixed(2)} seconds of ${material.id}:`,
+        })
+        content.push({ type: 'image', image: sample.image, mediaType: 'image/jpeg' })
+      }
     }
   }
   return content
@@ -189,11 +211,17 @@ export async function analyzeMaterials(options: {
       model,
       messages: [{ role: 'user', content }],
       abortSignal: controller.signal,
-      maxOutputTokens: 1600,
+      maxOutputTokens: 4000,
       maxRetries: 0,
     })
     const parsed = parseAnalysis(result.text, materials)
-    return { ...parsed, mode: includeImages ? ('visual' as const) : ('metadata' as const) }
+    return {
+      ...parsed,
+      scenes: includeImages
+        ? parsed.scenes
+        : parsed.scenes.map((scene) => ({ ...scene, samples: [] })),
+      mode: includeImages ? ('visual' as const) : ('metadata' as const),
+    }
   }
 
   try {

@@ -97,13 +97,14 @@ const createHost = (
   assets: Array<{ name: string; path: string }>,
   listFilesFromFolder = vi.fn(() => Promise.resolve(assets)),
 ) => {
-  mocks.appStore = reactive({ videoAssetsFolder: 'C:/video assets' })
+  mocks.appStore = reactive({ videoAssetsFolder: 'C:/video assets', videoAssetFolders: [{ path: 'C:/video assets', enabled: true }] })
   Object.defineProperty(window, 'electron', {
     configurable: true,
     value: { listFilesFromFolder },
   })
   const wrapper = mount(VideoManage, {
     global: {
+      renderStubDefaultSlot: true,
       stubs: {
         VForm: true,
         VSheet: true,
@@ -112,6 +113,7 @@ const createHost = (
         VIcon: true,
         VEmptyState: true,
         VideoAutoPreview: true,
+        VCheckboxBtn: true,
       },
     },
   })
@@ -136,6 +138,41 @@ describe('VideoManage asset filtering and segment selection', () => {
     mocks.random.int.mockReturnValue(0)
   })
 
+  it('rescan preserves deselected assets and selects only newly added videos', async () => {
+    const first = { name: 'one.mp4', path: 'C:/video assets/one.mp4' }
+    const second = { name: 'two.mp4', path: 'C:/video assets/two.mp4' }
+    const list = vi.fn().mockResolvedValueOnce([first]).mockResolvedValueOnce([first, second])
+    const { wrapper } = createHost([first], list)
+    try {
+      await flushPromises()
+      const check = wrapper.findAllComponents({ name: 'VCheckboxBtn' })[1]
+      check.vm.$emit('update:modelValue', false)
+      await flushPromises()
+      const api = wrapper.vm as unknown as {
+        refreshImportedFolder: (path: string) => Promise<unknown>
+        getStoryboardMaterials: () => Array<{ path: string }>
+      }
+      await api.refreshImportedFolder('C:/video assets')
+      expect(api.getStoryboardMaterials().map((item) => item.path)).toEqual([second.path])
+    } finally {
+      wrapper.unmount()
+    }
+  })
+
+  it('reads metadata from a filename containing a hash', async () => {
+    const asset = { name: 'scene#1.mp4', path: 'C:/video assets/scene#1.mp4' }
+    const metadata = installVideoMetadata({ 'file:///C:/video%20assets/scene%231.mp4': 4 })
+    const { wrapper, getVideoSegments } = createHost([asset])
+    try {
+      await flushPromises()
+      const segments = await getVideoSegments({ duration: 1 })
+      expect(segments.videoFiles).toEqual([asset.path])
+    } finally {
+      wrapper.unmount()
+      metadata.createElement.mockRestore()
+    }
+  })
+
   it('filters case-insensitive MP4 files and creates duration-matched segments', async () => {
     const assets = [
       { name: 'scene one.MP4', path: 'C:/video assets/scene one.MP4' },
@@ -153,11 +190,11 @@ describe('VideoManage asset filtering and segment selection', () => {
     try {
       await flushPromises()
       expect(listFilesFromFolder).toHaveBeenCalledWith({ folderPath: 'C:/video assets' })
-      expect(consoleInfo).toHaveBeenCalledWith('素材库刷新完成', {
+      expect(consoleInfo).toHaveBeenCalledWith('素材文件夹扫描完成', {
+        folderPath: 'C:/video assets',
         assetCount: 3,
         mp4Count: 2,
       })
-      expect(mocks.toast.success).toHaveBeenCalledWith('features.assets.success.loadSucceeded')
 
       const segments = await getVideoSegments({ duration: 2 })
       expect(segments).toEqual({
@@ -167,10 +204,10 @@ describe('VideoManage asset filtering and segment selection', () => {
       expect(metadata.videos).toHaveLength(1)
       expect(metadata.videos[0].pause).toHaveBeenCalled()
       expect(metadata.videos[0].removeEventListener).toHaveBeenCalledTimes(2)
-      expect(consoleDebug).toHaveBeenCalledWith('随机素材片段生成完成', {
+      expect(consoleDebug).toHaveBeenCalledWith('随机素材片段生成完成', expect.objectContaining({
         segmentCount: 1,
         totalDurationSeconds: '2.000',
-      })
+      }))
     } finally {
       wrapper.unmount()
       metadata.createElement.mockRestore()
@@ -199,7 +236,6 @@ describe('VideoManage asset filtering and segment selection', () => {
     ])
     try {
       await flushPromises()
-      expect(mocks.toast.warning).toHaveBeenCalledWith('features.assets.errors.noMp4InFolder')
       await expect(getVideoSegments({ duration: 2 })).rejects.toThrow(
         'features.assets.errors.noVideoAssets',
       )
@@ -212,7 +248,7 @@ describe('VideoManage asset filtering and segment selection', () => {
     const empty = createHost([])
     try {
       await flushPromises()
-      expect(mocks.toast.warning).toHaveBeenCalledWith('emptyStates.assetsFolderEmpty')
+      await expect(empty.getVideoSegments({ duration: 2 })).rejects.toThrow('features.assets.errors.noVideoAssets')
     } finally {
       empty.wrapper.unmount()
     }
@@ -221,7 +257,7 @@ describe('VideoManage asset filtering and segment selection', () => {
     const failed = createHost([], failedListing)
     const consoleDir = vi.spyOn(console, 'dir').mockImplementation(() => undefined)
     await flushPromises()
-    expect(mocks.toast.error).toHaveBeenCalledTimes(1)
+    await expect(failed.getVideoSegments({ duration: 2 })).rejects.toThrow('features.assets.errors.noVideoAssets')
     expect(consoleDir).toHaveBeenCalledTimes(1)
     failed.wrapper.unmount()
   })
@@ -244,7 +280,7 @@ describe('VideoManage asset filtering and segment selection', () => {
         'features.assets.errors.noUsableVideoAssets',
       )
       expect(metadata.videos).toHaveLength(2)
-      expect(consoleWarn).toHaveBeenCalledTimes(1)
+      expect(consoleWarn.mock.calls.filter(([message]) => message === '部分视频素材不可用，已跳过')).toHaveLength(1)
       expect(consoleWarn).toHaveBeenCalledWith('部分视频素材不可用，已跳过', {
         count: 2,
         samples: ['missing.mp4: 视频元数据读取失败', 'invalid.mp4: 视频时长无效'],
@@ -273,7 +309,7 @@ describe('VideoManage asset filtering and segment selection', () => {
       expect(metadata.videos).toHaveLength(1)
       expect(metadata.videos[0].pause).toHaveBeenCalled()
       expect(metadata.videos[0].removeEventListener).toHaveBeenCalledTimes(2)
-      expect(consoleWarn).toHaveBeenCalledTimes(1)
+      expect(consoleWarn.mock.calls.filter(([message]) => message === '部分视频素材不可用，已跳过')).toHaveLength(1)
       expect(vi.getTimerCount()).toBe(0)
     } finally {
       vi.useRealTimers()

@@ -99,7 +99,7 @@ function logDevWarning(...args: unknown[]) {
 }
 
 function getWebsiteId(): string | null {
-  if (!isDev) return WEBSITE_ID
+  if (!isDev) return buildInfo.distributionChannel === 'official' ? WEBSITE_ID : null
   if (!isAnalyticsInDevEnabled()) return null
   const developmentWebsiteId = process.env['ANALYTICS_DEV_WEBSITE_ID']?.trim()
   return developmentWebsiteId || null

@@ -9,11 +9,8 @@ import {
 } from './types'
 import { getAppTempPath } from '../lib/tools'
 import { app } from 'electron'
-import {
-  cloneMiniMaxVoice,
-  getMiniMaxSystemVoices,
-  synthesizeMiniMax,
-} from './minimax'
+import { alignSentenceTimings, estimateSentenceTimings } from '../../src/lib/agent/sentence-timing'
+import { cloneMiniMaxVoice, getMiniMaxSystemVoices, synthesizeMiniMax } from './minimax'
 import type {
   MiniMaxTtsCloneVoiceParams,
   MiniMaxTtsCloneVoiceResult,
@@ -138,9 +135,14 @@ export async function edgeTtsSynthesizeToFile(
       fs.writeFileSync(srtPath, srtText)
     }
 
+    const timedSentences = alignSentenceTimings(text, result.getWordList?.() ?? []).map(
+      (sentence) =>
+        Buffer.byteLength(text, 'utf8') > 4096 ? { ...sentence, approximate: true } : sentence,
+    )
     return {
       duration,
       srtText,
+      ...(timedSentences.length ? { timedSentences } : {}),
     }
   } catch (error) {
     for (const partialOutputPath of [outputAudioPath, srtPath]) {
@@ -232,11 +234,9 @@ function makeApproximateCaptionSrt(text: string, durationSeconds: number) {
       const start = Math.floor((totalMs * consumedWeight) / totalWeight)
       consumedWeight += cueWeight
       const end = Math.max(start + 1, Math.floor((totalMs * consumedWeight) / totalWeight))
-      return [
-        String(index + 1),
-        formatSrtTime(start) + ' --> ' + formatSrtTime(end),
-        cue,
-      ].join('\n')
+      return [String(index + 1), formatSrtTime(start) + ' --> ' + formatSrtTime(end), cue].join(
+        '\n',
+      )
     })
     .join('\n\n')
 }
@@ -280,7 +280,7 @@ export async function miniMaxTtsSynthesizeToFile(
       : undefined
     if (srtText) fs.writeFileSync(srtPath, srtText)
 
-    return { duration, srtText }
+    return { duration, srtText, timedSentences: estimateSentenceTimings(params.text, duration) }
   } catch (error) {
     for (const partialOutputPath of [outputAudioPath, srtPath]) {
       try {

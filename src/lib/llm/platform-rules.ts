@@ -16,7 +16,7 @@ export type CopyTone = 'neutral' | 'sales'
 // 默认走 neutral：用户明确要求“尽量不要带营销文案”，口播更像是边做边说，而不是带货念稿。
 const TONE_RULES: Record<CopyTone, string> = {
   neutral:
-    '不要营销腔：不喊“家人们/宝宝们/闭眼入/YYDS/天花板/王炸/绝了”，不写“限时、秒杀、最后 X 件、抢”，不堆“震撼、顶级、超值、必备”这类形容词，不用感叹号连发；用平实的说明和真实体验口气，把事实、尺寸、用法、适用场景讲清楚，像在跟朋友解释一件事。',
+    '不要营销腔：不喊“家人们/宝宝们/闭眼入/YYDS/天花板/王炸/绝了”，不写“限时、秒杀、最后 X 件、抢”，不堆“震撼、顶级、超值、必备”这类形容词，不用感叹号连发；像在跟朋友说话，用已知事实和画面自然介绍用途与场景，不要编造使用体验或逐项罗列缺少的参数。',
   sales:
     '可以适度带卖点和行动引导，但仍然不用绝对化用语、不虚构优惠、不喊口号式营销话术。',
 }
@@ -95,8 +95,8 @@ const PLATFORM_RULES: Record<PlatformKey, PlatformRule> = {
       'No medical or health claims, no before/after bait',
       'No off-platform redirects or contact details',
     ],
-    rhythm: 'Fast, spoken-word English (or the user language), short sentences, concrete numbers',
-    structure: 'Hook in the first 3 seconds → relatable situation → product proof → single CTA',
+    rhythm: 'Conversational spoken English (or the user language), varied natural sentence lengths, concrete details only when provided',
+    structure: 'Hook in the first 3 seconds → relatable situation → relevant known or visible product details → natural closing or CTA when appropriate',
   },
   'youtube-shorts': {
     label: 'YouTube Shorts (vertical 9:16)',
@@ -164,7 +164,7 @@ export function buildPlatformGuidance(options: PlatformGuidanceOptions): string 
   const lines: string[] = []
   const durationPart =
     duration > 0
-      ? `，目标时长约 ${duration} 秒（约 ${Math.round(duration * CHARS_PER_SECOND)} 字）`
+      ? `，目标时长约 ${duration} 秒（中文约 ${Math.round(duration * CHARS_PER_SECOND)} 字；英文约 ${Math.round(duration * 2)}–${Math.round(duration * 2.4)} 词，根据实际输出语言选择）`
       : ''
   lines.push(`投放平台：${rule.label}${durationPart}`)
   lines.push(`平台合规红线（必须遵守）：${rule.compliance.join('；')}。`)
