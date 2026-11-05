@@ -4,6 +4,20 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.7.0] - 2026-11-05
+
+<!-- i18n:en:start -->
+### Added
+
+- Add an in-app AI assistant connection page that generates copyable MCP stdio client configuration for the current installation.
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 新增
+
+- 增加 AI 助手接入页面，根据当前安装路径生成可复制的 MCP stdio 客户端配置。
+<!-- i18n:zh-CN:end -->
+
 ## [v1.6.0] - 2026-11-05
 
 <!-- i18n:en:start -->
