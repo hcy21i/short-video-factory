@@ -79,6 +79,14 @@ interface Window {
     ) => Promise<void>
     analyticsMarkActive: (durationMs: number) => Promise<void>
     checkForUpdates: () => Promise<import('./updater').UpdateCheckResult>
+    getMcpConnectionInfo: () => Promise<{
+      command: string
+      args: string[]
+      hostPath: string
+      appPath: string
+      isPackaged: boolean
+      hostExists: boolean
+    }>
     getMetadataState: () => Promise<import('./metadata/types').MetadataState>
     onMetadataStateChanged: (
       listener: (state: import('./metadata/types').MetadataState) => void,

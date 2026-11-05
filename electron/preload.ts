@@ -90,6 +90,7 @@ contextBridge.exposeInMainWorld('electron', {
   analyticsMarkActive: (durationMs: number) =>
     ipcRenderer.invoke('analytics-mark-active', durationMs),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getMcpConnectionInfo: () => ipcRenderer.invoke('mcp-get-connection-info'),
   getMetadataState: () => ipcRenderer.invoke('metadata-get-state'),
   onMetadataStateChanged: (listener: (state: import('./metadata/types').MetadataState) => void) => {
     const handler = (

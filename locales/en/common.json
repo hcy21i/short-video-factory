@@ -161,13 +161,14 @@
       "captionOptionsHint": "Choose on-video captions, a separate subtitle file, and continuous output.",
       "navigationGroups": {
         "creation": "CREATE",
-        "services": "MODELS"
+        "services": "SERVICES"
       },
       "pages": {
         "workbench": "Creator studio",
         "linkImport": "Import link",
         "materials": "Media library",
         "models": "AI models",
+        "assistant": "AI assistant connection",
         "voice": "Voice studio",
         "export": "Render & export"
       },
@@ -176,6 +177,7 @@
         "linkImport": "Download video into your library",
         "materials": "Organize clips and analyze scenes",
         "models": "Configure vision and writing models",
+        "assistant": "Connect an MCP-enabled AI client",
         "voice": "Choose a service, voice, and preview",
         "export": "Set format, captions, and output"
       },
@@ -184,6 +186,7 @@
         "linkImport": "Import link",
         "materials": "Media library",
         "models": "AI models",
+        "assistant": "AI assistant connection",
         "voice": "Voice studio",
         "export": "Render & export"
       },
@@ -192,6 +195,7 @@
         "linkImport": "Paste a video link and choose a destination folder.",
         "materials": "Import storyboard clips, browse the footage, and review the scenes the Agent can use.",
         "models": "Configure the vision and writing models, choose a provider preset, and test the connection.",
+        "assistant": "Generate a local connection config for MCP-enabled AI clients to query subtitle styles and render videos.",
         "voice": "Choose Edge TTS or MiniMax, set the speed, and preview the voice with your own text.",
         "export": "Set the aspect ratio, captions, batch run, background music, and destination before rendering."
       },
@@ -298,6 +302,35 @@
       "testConnection": "Test text connection",
       "invalidConfig": "Check the API URL, protocol, and model ID.",
       "saved": "Model settings saved"
+    },
+    "mcpSettings": {
+      "title": "Connect an AI assistant",
+      "description": "Let MCP-enabled AI clients query subtitle styles and render videos through a local MCP server.",
+      "ready": "Connection config is ready",
+      "loading": "Reading local config",
+      "unavailable": "Connection details unavailable",
+      "hostReady": "MCP server file found",
+      "hostMissing": "MCP server file has not been built",
+      "hostMissingHint": "Run pnpm build:mcp in the project folder, then reopen this page.",
+      "loadFailed": "Could not load connection details. Try again.",
+      "retry": "Retry",
+      "runtime": "Runtime",
+      "runtimePackaged": "Installed desktop app",
+      "runtimeDevelopment": "Source development environment",
+      "nodeCommand": "Node.js command",
+      "nodeCommandHint": "The AI client must be able to run Node.js 22 or newer. If it cannot find node, enter the full path to the Node.js executable.",
+      "hostPath": "MCP server file",
+      "appPath": "Short Video Factory executable path",
+      "configTitle": "Client configuration",
+      "configHint": "For clients that use mcpServers JSON. For other clients, copy the command and args shown here.",
+      "copyConfig": "Copy config",
+      "copied": "Connection config copied",
+      "copyFailed": "Could not copy. Select and copy the config manually.",
+      "stepsTitle": "Finish setup in your AI client",
+      "stepOne": "Copy the MCP config above.",
+      "stepTwo": "Open the client's MCP or extensions settings and add a local stdio server.",
+      "stepThree": "Save, restart the client, then ask it to use a Short Video Factory tool.",
+      "connectionNote": "Each client starts its own local MCP process. This page cannot read third-party client connection status; configure and restart the client to begin using it."
     },
     "llm": {
       "config": {

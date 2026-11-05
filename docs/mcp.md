@@ -6,6 +6,8 @@ Short Video Factory exposes a standard MCP `stdio` server. The MCP host uses Nod
 
 Node.js 22 or newer must be installed. Point the client's MCP server command to `node`, then pass the packaged host script and application executable as arguments:
 
+The desktop app's **AI assistant connection** page generates this configuration using the paths for the current installation. Set the Node.js command there if the AI client cannot find `node`, then copy the JSON into the client's MCP settings.
+
 ```json
 {
   "mcpServers": {

@@ -161,13 +161,14 @@
       "captionOptionsHint": "设置画面字幕、独立字幕文件和连续出片方式。",
       "navigationGroups": {
         "creation": "创作",
-        "services": "模型配置"
+        "services": "服务与连接"
       },
       "pages": {
         "workbench": "创作台",
         "linkImport": "链接导入",
         "materials": "素材库",
         "models": "AI 模型",
+        "assistant": "AI 助手接入",
         "voice": "配音选择",
         "export": "合成导出"
       },
@@ -176,6 +177,7 @@
         "linkImport": "下载视频并导入素材库",
         "materials": "整理素材并分析画面",
         "models": "配置分析与文案模型",
+        "assistant": "连接支持 MCP 的 AI 客户端",
         "voice": "选择服务、音色并试听",
         "export": "设置比例、字幕与输出"
       },
@@ -184,6 +186,7 @@
         "linkImport": "链接导入",
         "materials": "素材库",
         "models": "AI 模型",
+        "assistant": "AI 助手接入",
         "voice": "配音选择",
         "export": "合成导出"
       },
@@ -192,6 +195,7 @@
         "linkImport": "粘贴视频链接并选择保存位置。",
         "materials": "导入并浏览分镜素材，查看画面分析结果，决定 Agent 使用的素材来源。",
         "models": "分别配置视频理解和文案生成模型，设置常用服务商并测试连接。",
+        "assistant": "为支持 MCP 的 AI 客户端生成本机连接配置，让助手调用字幕样式查询和视频渲染。",
         "voice": "选择 Edge TTS 或 MiniMax 音色，设置语速、试听文本并检查效果。",
         "export": "设置视频比例、字幕、批量任务、背景音乐与输出目录，然后开始渲染。"
       },
@@ -298,6 +302,35 @@
       "testConnection": "测试文本连接",
       "invalidConfig": "请检查接口地址、协议和模型 ID。",
       "saved": "模型配置已保存"
+    },
+    "mcpSettings": {
+      "title": "连接 AI 助手",
+      "description": "通过本机 MCP 服务，让支持 MCP 的 AI 客户端查询字幕样式并调用视频渲染。",
+      "ready": "连接配置已就绪",
+      "loading": "正在读取本机配置",
+      "unavailable": "连接信息暂不可用",
+      "hostReady": "MCP 服务程序已找到",
+      "hostMissing": "尚未生成 MCP 服务程序",
+      "hostMissingHint": "在项目目录运行 pnpm build:mcp，然后重新打开此页。",
+      "loadFailed": "读取连接信息失败，请重试。",
+      "retry": "重试",
+      "runtime": "运行方式",
+      "runtimePackaged": "已安装的桌面应用",
+      "runtimeDevelopment": "源代码开发环境",
+      "nodeCommand": "Node.js 命令",
+      "nodeCommandHint": "AI 客户端需要能运行 Node.js 22 或更高版本。若客户端找不到 node，请填写 Node.js 可执行文件的完整路径。",
+      "hostPath": "MCP 服务文件",
+      "appPath": "短视频工厂程序路径",
+      "configTitle": "客户端配置",
+      "configHint": "适用于使用 mcpServers JSON 配置的客户端。其他客户端可按此处填写 command 和 args。",
+      "copyConfig": "复制配置",
+      "copied": "连接配置已复制",
+      "copyFailed": "复制失败，请手动选择并复制配置。",
+      "stepsTitle": "在 AI 客户端中完成连接",
+      "stepOne": "复制上方 MCP 配置。",
+      "stepTwo": "打开 AI 客户端的 MCP 或扩展设置，添加本地 stdio 服务。",
+      "stepThree": "保存并重启客户端，然后让助手调用短视频工厂工具。",
+      "connectionNote": "客户端会各自启动本机 MCP 服务进程。此页面无法读取第三方客户端的连接状态；配置并重启客户端后即可使用。"
     },
     "llm": {
       "config": {

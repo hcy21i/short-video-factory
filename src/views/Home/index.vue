@@ -180,6 +180,10 @@
           />
         </section>
 
+        <section v-show="activePage === 'assistant'" class="page-view content-page settings-page">
+          <McpAssistantSettings />
+        </section>
+
         <section v-show="activePage === 'export'" class="page-view content-page export-view">
           <div class="export-layout">
             <div class="export-options-column">
@@ -266,6 +270,7 @@ import VideoRender from './components/VideoRender.vue'
 import GenerationOptions from './components/GenerationOptions.vue'
 import PreflightChecklist from './components/PreflightChecklist.vue'
 import LinkImport from './components/LinkImport.vue'
+import McpAssistantSettings from './components/McpAssistantSettings.vue'
 import StoryboardSuggestions from './components/StoryboardSuggestions.vue'
 import { splitScriptSentences } from '@/lib/agent/script-sentences'
 
@@ -299,7 +304,7 @@ const navText = (key: string) => {
 }
 const isMac = window.electron.platform === 'darwin'
 const hasRenderStatus = (status: RenderStatus) => appStore.renderStatus === status
-type AppPage = 'workbench' | 'materials' | 'models' | 'voice' | 'export' | 'link-import'
+type AppPage = 'workbench' | 'materials' | 'models' | 'voice' | 'assistant' | 'export' | 'link-import'
 type ModelSettingsTab = 'analysis' | 'copywriting' | 'tts'
 const activePage = ref<AppPage>('materials')
 const navigationGroups: {
@@ -347,6 +352,12 @@ const navigationGroups: {
         icon: 'mdi-brain',
         labelKey: 'features.workspace.pages.models',
         hintKey: 'features.workspace.pageHints.models',
+      },
+      {
+        id: 'assistant',
+        icon: 'mdi-connection',
+        labelKey: 'features.workspace.pages.assistant',
+        hintKey: 'features.workspace.pageHints.assistant',
       },
     ],
   },

@@ -235,6 +235,35 @@ export default function initIPC() {
     return getMetadataState()
   })
 
+  ipcMain.handle('mcp-get-connection-info', (event) => {
+    const frame = event.senderFrame
+    if (!frame || frame !== event.sender.mainFrame) {
+      throw new Error('MCP connection info is only available to the main application frame.')
+    }
+    const frameUrl = new URL(frame.url)
+    if (VITE_DEV_SERVER_URL) {
+      const devOrigin = new URL(VITE_DEV_SERVER_URL).origin
+      if (frameUrl.origin !== devOrigin) throw new Error('Untrusted MCP IPC sender.')
+    } else if (frameUrl.protocol !== 'file:') {
+      throw new Error('Untrusted MCP IPC sender.')
+    }
+
+    const isPackaged = app.isPackaged
+    const hostPath = isPackaged
+      ? path.join(process.resourcesPath, 'mcp-stdio-host.cjs')
+      : path.join(process.env.APP_ROOT, '.mcp-build', 'mcp-stdio-host.cjs')
+    const appPath = isPackaged ? process.execPath : process.env.APP_ROOT
+
+    return {
+      command: 'node',
+      args: [hostPath, '--app-path', appPath],
+      hostPath,
+      appPath,
+      isPackaged,
+      hostExists: fs.existsSync(hostPath),
+    }
+  })
+
   ipcMain.handle('export-diagnostics', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     return exportDiagnostics(win, (phase) =>
