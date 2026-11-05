@@ -258,6 +258,7 @@
 </template>
 
 <script lang="ts" setup>
+import { resolveOpenSubsPreset } from '@/effect-engine/opensubs-presets'
 import TextGenerate from './components/TextGenerate.vue'
 import VideoManage from './components/VideoManage.vue'
 import ModelSettings from './components/ModelSettings.vue'
@@ -1128,6 +1129,7 @@ const renderSingleVideo = async (batchContext?: BatchContext) => {
         bgm: randomBgm?.path,
       },
       subtitleText: ttsResult.srtText,
+      subtitleStyle: resolveOpenSubsPreset(appStore.renderConfig.subtitlePreset, appStore.renderConfig.outputSize.height),
       subtitlesEnabled,
       exportSubtitles,
       outputSize: {

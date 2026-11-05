@@ -1,4 +1,4 @@
-import { Container, Text, TextStyle } from 'pixi.js'
+import { Container, Graphics, Text, TextStyle } from 'pixi.js'
 import { autoLineBreak } from '../shared/line-break'
 import type { SubtitleCue, SubtitleLayoutCue, SubtitleStyleConfig } from '../shared/types'
 
@@ -83,5 +83,12 @@ export function renderSubtitleFrame(params: {
   const positionScale = style.position === 'bottom' ? portraitLift : 1
   const verticalOffset = Math.round(style.offsetY * (height / 1920) * positionScale)
   text.y = baseY + verticalOffset
+  if (style.backgroundColor) {
+    const padding = cue.fontSize * 0.16
+    const box = new Graphics()
+      .rect(text.x - text.width / 2 - padding, text.y - text.height - padding, text.width + padding * 2, text.height + padding * 2)
+      .fill({ color: style.backgroundColor, alpha: style.backgroundAlpha ?? 1 })
+    root.addChild(box)
+  }
   root.addChild(text)
 }

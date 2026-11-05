@@ -102,6 +102,15 @@
         </v-menu>
       </div>
     </div>
+    <v-select
+      v-model="appStore.renderConfig.subtitlePreset"
+      class="mt-3"
+      :disabled="taskInProgress || !appStore.renderConfig.subtitlesEnabled"
+      :items="subtitlePresetOptions"
+      label="字幕样式"
+      density="compact"
+      hide-details
+    />
     <div v-if="appStore.batchProgress" class="generation-batch-progress" aria-live="polite">
       <template v-if="appStore.batchProgress.running">
         <div>
@@ -139,9 +148,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { openSubsPresets } from '@/effect-engine/opensubs-presets'
 import { useTranslation } from 'i18next-vue'
 import { RenderStatus, useAppStore } from '@/store'
 
+const subtitlePresetOptions = [{ title: '当前默认样式', value: '' }, ...openSubsPresets.map((item) => ({ title: `${item.label} · ${item.name}`, value: item.name }))]
 const appStore = useAppStore()
 const { t } = useTranslation()
 const batchSettingsOpen = ref(false)

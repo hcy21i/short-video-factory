@@ -1,0 +1,1 @@
+OpenSubs style preset sources, copyright OpenSubs contributors, AGPL-3.0-or-later. Source: https://github.com/open-subs/opensubs/tree/2a2d16cec3faec96a17149630ac49aa3b8929ffc/crates/subs-style/src . Adapted in src/effect-engine/opensubs-presets.ts.

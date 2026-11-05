@@ -128,20 +128,22 @@ export const useAppStore = defineStore(
       outputFileExt: '.mp4',
       subtitlesEnabled: true,
       exportSubtitles: false,
+      subtitlePreset: '',
     })
     const autoBatch = ref(false)
     const batchConfig = ref({ count: 10, onError: 'stop' as 'stop' | 'continue' })
     const batchProgress = ref<BatchRunState | null>(null)
     const renderStatus = ref(RenderStatus.None)
     const updateRenderConfig = (
-      newConfig: Omit<typeof renderConfig.value, 'subtitlesEnabled' | 'exportSubtitles'> &
-        Partial<Pick<typeof renderConfig.value, 'subtitlesEnabled' | 'exportSubtitles'>>,
+      newConfig: Omit<typeof renderConfig.value, 'subtitlesEnabled' | 'exportSubtitles' | 'subtitlePreset'> &
+        Partial<Pick<typeof renderConfig.value, 'subtitlesEnabled' | 'exportSubtitles' | 'subtitlePreset'>>,
     ) => {
       renderConfig.value = {
         ...newConfig,
         outputSize: { ...newConfig.outputSize },
         subtitlesEnabled: newConfig.subtitlesEnabled !== false,
         exportSubtitles: newConfig.exportSubtitles === true,
+        subtitlePreset: newConfig.subtitlePreset ?? '',
       }
     }
     const updateRenderStatus = (newStatus: RenderStatus) => {

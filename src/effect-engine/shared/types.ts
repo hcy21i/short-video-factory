@@ -36,6 +36,8 @@ export interface SubtitleStyleConfig {
   color: string
   strokeColor: string
   strokeWidth: number
+  backgroundColor?: string
+  backgroundAlpha?: number
 }
 
 export interface SubtitleRendererTask {
