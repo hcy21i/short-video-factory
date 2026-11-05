@@ -12,7 +12,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "cross-env VITE_CJS_IGNORE_WARNING=true vite",
-    "build": "node scripts/prepare-yt-dlp.cjs && vue-tsc && cross-env VITE_CJS_IGNORE_WARNING=true vite build && electron-builder",
+    "build": "node scripts/prepare-yt-dlp.cjs && vue-tsc && cross-env VITE_CJS_IGNORE_WARNING=true vite build && pnpm build:mcp && electron-builder",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:llm": "vitest run tests/llm",
@@ -22,9 +22,12 @@
     "format": "prettier --write .",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "node build/scripts/post-install.js",
-    "lipo-ffmpeg": "node build/scripts/lipo-ffmpeg.js"
+    "lipo-ffmpeg": "node build/scripts/lipo-ffmpeg.js",
+    "mcp": "pnpm build:mcp && node .mcp-build/mcp-stdio-host.cjs --app-path .",
+    "build:mcp": "node build/scripts/build-mcp-host.cjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "archiver": "^7.0.1",
     "axios": "^1.11.0",
     "better-sqlite3": "9.6.0",
@@ -103,4 +106,3 @@
     "pnpm": ">=10.12.4"
   }
 }
-

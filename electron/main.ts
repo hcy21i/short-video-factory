@@ -3,8 +3,6 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { isDev } from './lib/is-dev'
 import path from 'node:path'
-import initIPC from './ipc'
-import { initSqlite } from './sqlite'
 import i18next from 'i18next'
 import { changeAppLanguage, initI18n } from './i18n'
 import { i18nLanguages } from './i18n/common-options'
@@ -39,6 +37,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = isDev ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
+const mcpMode = process.argv.includes('--mcp-worker') || app.commandLine.hasSwitch('mcp-worker')
 let win: BrowserWindow | null
 let mainConsoleHooked = false
 
@@ -209,7 +208,7 @@ function buildMenu() {
 //让应用程序及其菜单栏保持活动状态，直到用户退出
 //显式使用Cmd+Q。
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (!mcpMode && process.platform !== 'darwin') {
     app.quit()
     win = null
   }
@@ -227,8 +226,20 @@ app.on('activate', () => {
 // app.disableHardwareAcceleration();
 
 app.whenReady().then(async () => {
+  if (mcpMode) {
+    // Keep worker logs on stderr; the client-facing MCP stdio host owns stdout.
+    console.log = (...args: unknown[]) => process.stderr.write(`${args.map(String).join(' ')}\n`)
+    console.info = console.warn = console.error = console.debug = console.log
+    const { startMcpWorker } = await import('./mcp/server')
+    await startMcpWorker()
+    return
+  }
   initLogger()
   setupMainConsoleLogging()
+  const [{ initSqlite }, { default: initIPC }] = await Promise.all([
+    import('./sqlite'),
+    import('./ipc'),
+  ])
   initSqlite()
   // Register the i18n IPC handlers before the renderer starts requesting its
   // locale. Loading the window while initI18n is still pending can leave the
@@ -257,6 +268,7 @@ app.whenReady().then(async () => {
 
 let analyticsQuitStarted = false
 app.on('before-quit', (event) => {
+  if (mcpMode) return
   if (analyticsQuitStarted) return
   event.preventDefault()
   analyticsQuitStarted = true

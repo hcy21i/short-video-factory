@@ -21,6 +21,10 @@ release
 # Local agent instructions and documentation
 /AGENTS.md
 /docs/
+!/docs/
+/docs/*
+!/docs/mcp.md
+.mcp-build/
 
 # Editor directories and files
 .DS_Store
