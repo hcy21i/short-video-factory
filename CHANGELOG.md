@@ -4,6 +4,20 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.6.0] - 2026-11-05
+
+<!-- i18n:en:start -->
+### Added
+
+- Add a visual gallery for all twelve subtitle presets; select a preview card to apply the style.
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 新增
+
+- 增加 12 种字幕预设的可视化预览卡片，点击卡片即可应用样式。
+<!-- i18n:zh-CN:end -->
+
 ## [v1.5.0] - 2026-11-05
 
 <!-- i18n:en:start -->
