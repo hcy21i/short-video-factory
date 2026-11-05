@@ -4,6 +4,22 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.5.0] - 2026-11-05
+
+<!-- i18n:en:start -->
+### Added
+
+- Add twelve OpenSubs subtitle presets to video exports.
+- Add a standard MCP stdio server so local AI clients can query subtitle presets and render videos.
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 新增
+
+- 为视频导出增加 12 种 OpenSubs 字幕样式。
+- 增加标准 MCP stdio 服务，供本地 AI 客户端查询字幕样式并调用视频渲染。
+<!-- i18n:zh-CN:end -->
+
 ## [v1.4.3] - 2026-11-03
 
 <!-- i18n:en:start -->
