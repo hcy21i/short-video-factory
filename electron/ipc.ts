@@ -36,6 +36,7 @@ import { getMetadataState } from './metadata/runtime'
 import { validateExternalHttpsUrl } from './lib/external-url'
 import { openDirectory } from './lib/open-directory'
 import { downloadVideo } from './lib/video-import'
+import { registerTranscriptionIPC } from './transcription'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let windowMaximizedByApp = false
@@ -119,6 +120,7 @@ async function cleanupVoiceCloneSample(samplePath: string, sourcePath: string) {
 export default function initIPC() {
   const activeTtsSynthesisControllers = new Map<string, AbortController>()
   setupEffectRendererFrameWriter()
+  registerTranscriptionIPC()
   ipcMain.on('app-log', (_event, payload: { level: AppLogLevel; args: unknown[] }) => {
     const level = payload?.level
     const args = payload?.args

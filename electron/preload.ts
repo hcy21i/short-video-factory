@@ -18,6 +18,14 @@ import {
 } from './tts/types'
 import { RenderVideoParams } from './ffmpeg/types'
 import type { AppLogLevel } from './logger'
+import type {
+  SaveSrtInput,
+  SaveTranscriptionConfigInput,
+  SelectedTranscriptionMediaView,
+  TranscriptionConfigView,
+  TranscriptionResult,
+  TranscribeMediaInput,
+} from './transcription/types'
 
 // --------- 向界面渲染进程暴露某些API ---------
 
@@ -64,7 +72,8 @@ contextBridge.exposeInMainWorld('electron', {
   openDirectory: (folderPath: string) => ipcRenderer.invoke('open-directory', folderPath),
   listFilesFromFolder: (params: ListFilesFromFolderParams) =>
     ipcRenderer.invoke('list-files-from-folder', params),
-  importVideoLink: (params: { url: string; folder: string }) => ipcRenderer.invoke('import-video-link', params),
+  importVideoLink: (params: { url: string; folder: string }) =>
+    ipcRenderer.invoke('import-video-link', params),
   onImportVideoProgress: (listener: (percent: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, percent: string) => listener(percent)
     ipcRenderer.on('import-video-progress', handler)
@@ -92,6 +101,17 @@ contextBridge.exposeInMainWorld('electron', {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   getMcpConnectionInfo: () => ipcRenderer.invoke('mcp-get-connection-info'),
   getMetadataState: () => ipcRenderer.invoke('metadata-get-state'),
+  getTranscriptionConfig: (): Promise<TranscriptionConfigView> =>
+    ipcRenderer.invoke('transcription-get-config'),
+  saveTranscriptionConfig: (
+    params: SaveTranscriptionConfigInput,
+  ): Promise<TranscriptionConfigView> => ipcRenderer.invoke('transcription-save-config', params),
+  selectTranscriptionMedia: (): Promise<SelectedTranscriptionMediaView | null> =>
+    ipcRenderer.invoke('transcription-select-media'),
+  transcribeMedia: (params: TranscribeMediaInput): Promise<TranscriptionResult> =>
+    ipcRenderer.invoke('transcription-run', params),
+  saveTranscriptionSrt: (params: SaveSrtInput): Promise<string | null> =>
+    ipcRenderer.invoke('transcription-save-srt', params),
   onMetadataStateChanged: (listener: (state: import('./metadata/types').MetadataState) => void) => {
     const handler = (
       _event: Electron.IpcRendererEvent,

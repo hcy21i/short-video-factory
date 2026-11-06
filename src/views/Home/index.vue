@@ -180,6 +180,10 @@
           />
         </section>
 
+        <section v-show="activePage === 'transcription'" class="page-view content-page transcription-page">
+          <SubtitleTranscriber />
+        </section>
+
         <section v-show="activePage === 'assistant'" class="page-view content-page settings-page">
           <McpAssistantSettings />
         </section>
@@ -272,6 +276,7 @@ import PreflightChecklist from './components/PreflightChecklist.vue'
 import LinkImport from './components/LinkImport.vue'
 import McpAssistantSettings from './components/McpAssistantSettings.vue'
 import StoryboardSuggestions from './components/StoryboardSuggestions.vue'
+import SubtitleTranscriber from './components/SubtitleTranscriber.vue'
 import { splitScriptSentences } from '@/lib/agent/script-sentences'
 
 import { computed, h, nextTick, onBeforeUnmount, ref, watch } from 'vue'
@@ -304,7 +309,7 @@ const navText = (key: string) => {
 }
 const isMac = window.electron.platform === 'darwin'
 const hasRenderStatus = (status: RenderStatus) => appStore.renderStatus === status
-type AppPage = 'workbench' | 'materials' | 'models' | 'voice' | 'assistant' | 'export' | 'link-import'
+type AppPage = 'workbench' | 'materials' | 'models' | 'voice' | 'assistant' | 'export' | 'link-import' | 'transcription'
 type ModelSettingsTab = 'analysis' | 'copywriting' | 'tts'
 const activePage = ref<AppPage>('materials')
 const navigationGroups: {
@@ -317,6 +322,7 @@ const navigationGroups: {
     labelKey: 'features.workspace.navigationGroups.creation',
     items: [
       { id: 'link-import', icon: 'mdi-link-variant', labelKey: 'features.workspace.pages.linkImport', hintKey: 'features.workspace.pageHints.linkImport' },
+      { id: 'transcription', icon: 'mdi-subtitles-outline', labelKey: 'features.workspace.pages.transcription', hintKey: 'features.workspace.pageHints.transcription' },
       {
         id: 'materials',
         icon: 'mdi-folder-multiple-image',
@@ -1666,6 +1672,11 @@ const handleCancelRender = () => {
 
 .materials-page > :deep(*) {
   min-height: 620px;
+}
+
+.transcription-page > :deep(*) {
+  width: 100%;
+  min-height: 0;
 }
 
 .settings-page {
