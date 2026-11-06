@@ -4,6 +4,38 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
+## [v1.8.1] - 2026-11-06
+
+<!-- i18n:en:start -->
+### Added
+
+- Add eight animated subtitle effects with live previews to Windows video exports.
+- Add the `render_subtitled_video` MCP tool to overlay SRT captions while preserving the source audio.
+
+### Changed
+
+- Limit releases to the Windows x64 installer and cap MCP render duration, source timestamps, and subtitle frame counts.
+
+### Removed
+
+- Remove the remote transcription workspace, timeline editing, and standalone SRT export.
+<!-- i18n:en:end -->
+
+<!-- i18n:zh-CN:start -->
+### 新增
+
+- 视频导出新增 8 种字幕动画和实时预览。
+- MCP 新增 `render_subtitled_video`，可叠加 SRT 字幕并保留原视频音轨。
+
+### 调整
+
+- 发行内容限定为 Windows x64 安装包，并限制 MCP 渲染时长、素材时间点和字幕帧数。
+
+### 移除
+
+- 移除远程转录工作区、时间轴校对和单独导出 SRT 功能。
+<!-- i18n:zh-CN:end -->
+
 ## [v1.7.0] - 2026-11-05
 
 <!-- i18n:en:start -->
