@@ -1,4 +1,14 @@
 export type SubtitleSource = 'tts' | 'asr' | 'external' | 'manual'
+export type SubtitleAnimation =
+  | 'none'
+  | 'fade'
+  | 'slide-up'
+  | 'slide-left'
+  | 'slide-right'
+  | 'pop'
+  | 'zoom-in'
+  | 'typewriter'
+  | 'fade-out'
 
 export interface SubtitleAsset {
   srtText: string
@@ -16,8 +26,12 @@ export interface SubtitleRenderLine {
   text: string
 }
 
+export interface SubtitleLayoutLine extends SubtitleRenderLine {
+  width: number
+}
+
 export interface SubtitleLayoutCue extends SubtitleCue {
-  lines: SubtitleRenderLine[]
+  lines: SubtitleLayoutLine[]
   fontSize: number
 }
 
@@ -55,6 +69,7 @@ export interface SubtitleRendererTask {
   }
   subtitleAsset: SubtitleAsset
   style: SubtitleStyleConfig
+  animation?: SubtitleAnimation
 }
 
 export interface SubtitleRendererManifest {

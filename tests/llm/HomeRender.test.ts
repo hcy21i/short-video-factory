@@ -31,6 +31,9 @@ vi.mock('@/store', () => ({
 }))
 vi.mock('i18next-vue', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('vue-toastification', () => ({ useToast: () => mocks.toast }))
+vi.mock('@/views/Home/components/McpAssistantSettings.vue', () => ({
+  default: defineComponent({ setup: () => () => null }),
+}))
 vi.mock('@/views/Home/components/ModelSettings.vue', () => ({
   default: defineComponent({
     setup(_, { expose }) {

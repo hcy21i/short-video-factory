@@ -104,6 +104,8 @@
     </div>
     <SubtitlePresetPicker
       v-model="appStore.renderConfig.subtitlePreset"
+      v-model:animation="appStore.renderConfig.subtitleAnimation"
+      :preview-active="props.previewActive"
       :disabled="taskInProgress"
       :selection-disabled="taskInProgress || !appStore.renderConfig.subtitlesEnabled"
     />
@@ -147,6 +149,8 @@ import { computed, ref, watch } from 'vue'
 import { useTranslation } from 'i18next-vue'
 import SubtitlePresetPicker from './SubtitlePresetPicker.vue'
 import { RenderStatus, useAppStore } from '@/store'
+
+const props = withDefaults(defineProps<{ previewActive?: boolean }>(), { previewActive: true })
 
 const appStore = useAppStore()
 const { t } = useTranslation()

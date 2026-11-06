@@ -45,10 +45,23 @@ if (isProject) {
 worker.stderr?.on('data', (chunk) => process.stderr.write(`[short-video-factory] ${chunk}`))
 let shuttingDown = false
 const stopWorker = () => { if (shuttingDown) return; shuttingDown = true; worker.kill() }
+let mcpServer: Server | undefined
 process.once('exit', stopWorker)
 process.once('SIGINT', () => { stopWorker(); process.exit(130) })
 process.once('SIGTERM', () => { stopWorker(); process.exit(143) })
-worker.once('exit', (code) => { if (!shuttingDown) { process.stderr.write(`[short-video-factory] worker exited (${code})\n`); process.exitCode = code || 1 } })
+worker.once('exit', (code) => {
+  if (shuttingDown) return
+  shuttingDown = true
+  const exitCode = code || 1
+  process.stderr.write(`[short-video-factory] worker exited (${code})\n`)
+  void (mcpServer?.close() ?? Promise.resolve())
+    .catch((error: unknown) => {
+      process.stderr.write(
+        `[short-video-factory] failed to close MCP server: ${error instanceof Error ? error.message : String(error)}\n`,
+      )
+    })
+    .finally(() => process.exit(exitCode))
+})
 const headers = { authorization: `Bearer ${token}` }
 const deadline = Date.now() + 30000
 while (Date.now() < deadline) {
@@ -61,6 +74,7 @@ while (Date.now() < deadline) {
 if (Date.now() >= deadline) { stopWorker(); throw new Error('Electron worker did not become ready within 30 seconds') }
 
 const server = new Server({ name: 'short-video-factory', version: '1.0.0' }, { capabilities: { tools: {} } })
+mcpServer = server
 server.onerror = (error) => process.stderr.write(`[MCP] ${error.message}\n`)
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: mcpTools }))
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -78,6 +92,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 })
 const transport = new StdioServerTransport()
 await server.connect(transport)
-process.stdin.once('end', () => { void server.close().finally(stopWorker) })
+process.stdin.once('end', () => {
+  if (shuttingDown) return
+  shuttingDown = true
+  void server.close().finally(() => worker.kill())
+})
 }
 main().catch((error: unknown) => { process.stderr.write(`[short-video-factory] ${error instanceof Error ? error.message : String(error)}\n`); process.exitCode = 1 })

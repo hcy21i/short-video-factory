@@ -4,6 +4,7 @@ import type { SubtitleRendererTask } from '../shared/types'
 import { createPixiApp } from './pixi-stage-factory'
 import { exportFramePng } from './png-exporter'
 import { renderSubtitleFrame } from './subtitle-render-runtime'
+import { getSubtitleRenderFrameCount } from '../shared/render-limits'
 
 export async function renderSubtitleFrames(
   task: SubtitleRendererTask,
@@ -27,7 +28,7 @@ export async function renderSubtitleFrames(
       return context.measureText(text).width
     },
   })
-  const totalFrames = Math.max(1, Math.ceil((task.video.durationMs / 1000) * task.video.fps))
+  const totalFrames = getSubtitleRenderFrameCount(task.video.durationMs, task.video.fps)
 
   try {
     for (let frameIndex = 1; frameIndex <= totalFrames; frameIndex += 1) {
@@ -36,6 +37,7 @@ export async function renderSubtitleFrames(
         root,
         cues,
         style: task.style,
+        animation: task.animation,
         timeMs: Math.floor(((frameIndex - 1) / task.video.fps) * 1000),
         width: task.video.width,
         height: task.video.height,

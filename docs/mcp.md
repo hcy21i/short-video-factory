@@ -1,12 +1,12 @@
 # Connect AI clients with MCP
 
-Short Video Factory exposes a standard MCP `stdio` server. The MCP host uses Node.js for the client protocol and starts a private, hidden Electron worker for video rendering. This works with MCP clients that launch local `stdio` servers, including clients that do not support MCP over HTTP. Each client gets an isolated worker; one worker renders one job at a time.
+Short Video Factory exposes a standard MCP `stdio` server for clients that launch local servers, including clients that do not support MCP over HTTP. The packaged Windows app uses a Node.js host script and starts a private, hidden Electron worker. Each MCP client starts its own worker, which runs one render task at a time.
 
-## Packaged app
+## Connect a client
 
-Node.js 22 or newer must be installed. Point the client's MCP server command to `node`, then pass the packaged host script and application executable as arguments:
+Install Node.js 22 or newer. In the app, open **AI assistant connection**, copy the generated JSON into the MCP settings of your client, and use the same JSON in each client you want to connect. If a client cannot find `node`, set its full Node.js executable path in the app before copying the configuration.
 
-The desktop app's **AI assistant connection** page generates this configuration using the paths for the current installation. Set the Node.js command there if the AI client cannot find `node`, then copy the JSON into the client's MCP settings.
+The generated configuration follows this shape; the app fills in the actual install paths:
 
 ```json
 {
@@ -23,27 +23,14 @@ The desktop app's **AI assistant connection** page generates this configuration 
 }
 ```
 
-The app executable is `短视频工厂.app/Contents/MacOS/短视频工厂` on macOS. On Linux, use the executable installed from the AppImage and the host script under the adjacent `resources` directory. Change these paths to match your install location. Use the same command and arguments in each MCP client.
-
-## Development from source
-
-Build the renderer and Electron main process with `pnpm exec vite build`, then generate the standalone host with `pnpm build:mcp`. Add an MCP server entry with `node` as command and the following arguments, replacing both placeholders with absolute paths:
-
-```json
-[
-  "<absolute-project-path>/.mcp-build/mcp-stdio-host.cjs",
-  "--app-path",
-  "<absolute-project-path>"
-]
-```
-
-The host launches the Electron binary from that project.
-
 ## Tools
 
 - `list_subtitle_styles`: list the twelve subtitle styles.
-- `render_video`: render local video clips in the supplied order with a voice track, optional background music, optional SRT subtitles, and an optional subtitle style. Paths must be absolute. Clip times are seconds. Output folders must already exist; width and height must be even numbers.
-- `get_task_status`: read task progress, output path, or error using its `jobId`.
-- `cancel_task`: cancel an active render using its `jobId`.
+- `render_subtitled_video`: overlay an SRT, subtitle style, and optional animation on one local video while retaining its original audio track. Animations are `none`, `fade`, `slide-up`, `slide-left`, `slide-right`, `pop`, `zoom-in`, `typewriter`, and `fade-out`; `fade-out` fades at the end of each cue. The default is `none`. The video must contain audio. Supply `duration` in seconds, then poll `get_task_status` for the output path.
+- `render_video`: render local video clips in the supplied order with a voice track, optional background music, optional SRT subtitles, subtitle style, and optional animation. The animation values are `none`, `fade`, `slide-up`, `slide-left`, `slide-right`, `pop`, `zoom-in`, `typewriter`, and `fade-out`; `fade-out` fades at the end of each cue. The default is `none`. Paths must be absolute. Clip times are seconds. Output folders must already exist; width and height must be even numbers.
+- `get_task_status`: read the progress, result, output path, or error for a render task using its `jobId`.
+- `cancel_task`: cancel a running render task using its `jobId`.
 
-The worker listens only on `127.0.0.1`, uses a fresh random token for each connection, and accepts calls only from its MCP host. Disconnecting the AI client cancels any render still in progress.
+Video and audio paths are read by the local app. The MCP worker listens only on `127.0.0.1`, uses a fresh random token for each connection, and accepts calls only from its MCP host. Disconnecting the AI client cancels its active render job.
+
+Each MCP render is limited to 10 minutes of output. Source clip timestamps are limited to 24 hours, and subtitle frame generation is capped at 18,000 frames.

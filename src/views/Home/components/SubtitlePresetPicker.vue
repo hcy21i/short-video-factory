@@ -23,6 +23,29 @@
       </v-btn>
     </div>
 
+    <div class="subtitle-animation-control">
+      <v-select
+        :model-value="selectedAnimation"
+        :items="animationOptions"
+        :disabled="selectionDisabled"
+        :label="t('features.render.config.subtitleAnimationLabel')"
+        density="compact"
+        hide-details
+        @update:model-value="setAnimation"
+      />
+      <div class="animation-preview">
+        <div class="animation-preview-heading">
+          <span>{{ t('features.render.config.animationPreviewLabel') }}</span>
+          <span>{{ selectedAnimationTitle }}</span>
+        </div>
+        <div class="animation-preview-frame" aria-hidden="true">
+          <span class="animation-preview-caption" :style="animationPreviewStyle">
+            {{ animationPreviewText }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <v-dialog v-model="previewOpen" max-width="940">
       <v-card class="subtitle-presets-dialog" rounded="lg">
         <div class="preset-dialog-heading">
@@ -68,20 +91,37 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, type CSSProperties } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, type CSSProperties } from 'vue'
+import { useTranslation } from 'i18next-vue'
+import { defaultSubtitleStyle } from '@/effect-engine/default-style'
 import { openSubsPresets, resolveOpenSubsPreset } from '@/effect-engine/opensubs-presets'
+import { getSubtitleAnimationFrame, subtitleAnimationOptions } from '@/effect-engine/shared/subtitle-animation'
+import type { SubtitleAnimation } from '@/effect-engine/shared/types'
 
 const props = withDefaults(
   defineProps<{
     modelValue: string
+    animation?: SubtitleAnimation
     disabled?: boolean
     selectionDisabled?: boolean
+    previewActive?: boolean
   }>(),
-  { disabled: false, selectionDisabled: false },
+  { disabled: false, selectionDisabled: false, previewActive: true },
 )
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+  'update:animation': [value: SubtitleAnimation]
+}>()
 
 const previewOpen = ref(false)
+const previewElapsedMs = ref(0)
+const { t } = useTranslation()
+const previewText = computed(() => t('features.render.config.animationSample') as string)
+const previewDurationMs = 1600
+const previewCycleMs = 2000
+let previewAnimationFrame = 0
+let previewStartedAt = 0
+let previewLastUpdatedAt = 0
 const selectedPresetName = computed({
   get: () => props.modelValue,
   set: (value: string | null) => emit('update:modelValue', value ?? ''),
@@ -90,6 +130,33 @@ const presetOptions = [
   { title: '当前默认样式', value: '' },
   ...openSubsPresets.map((preset) => ({ title: `${preset.label} · ${preset.name}`, value: preset.name })),
 ]
+const animationOptions = computed(() =>
+  subtitleAnimationOptions.map(({ titleKey, value }) => ({ title: t(titleKey), value })),
+)
+const selectedAnimation = computed(() => props.animation ?? 'none')
+const selectedAnimationTitle = computed(
+  () => {
+    const option = subtitleAnimationOptions.find((item) => item.value === selectedAnimation.value)
+    return t(option?.titleKey ?? 'features.render.config.animationNames.none')
+  },
+)
+const animationFrame = computed(() =>
+  getSubtitleAnimationFrame({
+    animation: selectedAnimation.value,
+    elapsedMs: previewElapsedMs.value,
+    cueDurationMs: previewDurationMs,
+    text: previewText.value,
+  }),
+)
+const animationPreviewText = computed(
+  () => Array.from(previewText.value).slice(0, animationFrame.value.visibleCharacters).join('') || '　',
+)
+
+function setAnimation(value: unknown) {
+  if (subtitleAnimationOptions.some((option) => option.value === value)) {
+    emit('update:animation', value as SubtitleAnimation)
+  }
+}
 
 function rgbaFromHex(color: string, alpha: number) {
   const match = /^#([\da-f]{6})$/i.exec(color)
@@ -102,8 +169,7 @@ function rgbaFromHex(color: string, alpha: number) {
 }
 
 function previewStyle(name: string): CSSProperties {
-  const style = resolveOpenSubsPreset(name, 1920)
-  if (!style) return {}
+  const style = resolveOpenSubsPreset(name, 1920) ?? defaultSubtitleStyle
 
   const fontSize = Math.min(28, Math.max(12, Math.round((style.fontSize ?? 80) * 0.15)))
   const outlineWidth = style.strokeWidth ? Math.min(1.25, Math.max(0.45, style.strokeWidth * 0.35)) : 0
@@ -124,6 +190,50 @@ function previewStyle(name: string): CSSProperties {
     transform: position === 'middle' ? 'translateY(-50%)' : undefined,
   }
 }
+
+const animationPreviewStyle = computed<CSSProperties>(() => {
+  const frame = animationFrame.value
+  const position =
+    resolveOpenSubsPreset(selectedPresetName.value, 1920)?.position ?? defaultSubtitleStyle.position
+  const baseTransform = position === 'middle' ? 'translateY(-50%)' : ''
+  const horizontalOffset = `${(frame.horizontalOffsetRatio / 0.82) * 100}%`
+  const motionTransform = `translate3d(${horizontalOffset}, ${Math.round(frame.verticalOffsetProgress * 7)}px, 0) scale(${frame.scale})`
+  return {
+    ...previewStyle(selectedPresetName.value),
+    opacity: frame.opacity,
+    transform: [baseTransform, motionTransform].filter(Boolean).join(' '),
+  }
+})
+
+function stopAnimationPreview() {
+  if (previewAnimationFrame) cancelAnimationFrame(previewAnimationFrame)
+  previewAnimationFrame = 0
+}
+
+function startAnimationPreview() {
+  stopAnimationPreview()
+  previewElapsedMs.value = props.disabled || !props.previewActive ? previewDurationMs : 0
+  if (props.disabled || !props.previewActive || selectedAnimation.value === 'none') return
+
+  previewStartedAt = performance.now()
+  previewLastUpdatedAt = 0
+  const tick = (now: number) => {
+    if (props.disabled || selectedAnimation.value === 'none') {
+      previewAnimationFrame = 0
+      return
+    }
+    if (now - previewLastUpdatedAt >= 33) {
+      previewElapsedMs.value = (now - previewStartedAt) % previewCycleMs
+      previewLastUpdatedAt = now
+    }
+    previewAnimationFrame = requestAnimationFrame(tick)
+  }
+  previewAnimationFrame = requestAnimationFrame(tick)
+}
+
+watch([selectedAnimation, () => props.disabled, () => props.previewActive], startAnimationPreview)
+onMounted(startAnimationPreview)
+onBeforeUnmount(stopAnimationPreview)
 
 function positionLabel(name: string) {
   const position = resolveOpenSubsPreset(name, 1920)?.position ?? 'bottom'
@@ -151,6 +261,58 @@ function selectPreset(name: string) {
 .preset-preview-trigger {
   flex: 0 0 auto;
   margin-top: 2px;
+}
+
+.subtitle-animation-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 1.15fr);
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.animation-preview {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.animation-preview-heading {
+  display: flex;
+  justify-content: space-between;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+  font-size: 0.68rem;
+}
+
+.animation-preview-heading span:last-child {
+  color: rgb(var(--v-theme-primary));
+}
+
+.animation-preview-frame {
+  position: relative;
+  height: 84px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--v-border-color), 0.72);
+  border-radius: 9px;
+  background:
+    radial-gradient(ellipse at 70% 28%, rgba(237, 218, 178, 0.46), transparent 36%),
+    linear-gradient(155deg, transparent 0 48%, rgba(27, 37, 38, 0.3) 48.5% 100%),
+    linear-gradient(180deg, #78888d 0%, #68777a 48%, #526064 49%, #374346 100%);
+}
+
+.animation-preview-caption {
+  position: absolute;
+  z-index: 1;
+  right: 9%;
+  left: 9%;
+  display: block;
+  padding: 0.08em 0.16em;
+  border-radius: 2px;
+  line-height: 1.12;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  overflow-wrap: anywhere;
+  will-change: transform, opacity;
 }
 
 .subtitle-presets-dialog {
@@ -321,6 +483,10 @@ function selectPreset(name: string) {
 }
 
 @media (max-width: 520px) {
+  .subtitle-animation-control {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .preset-dialog-heading {
     padding: 1rem 1rem 0.8rem;
   }

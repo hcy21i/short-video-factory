@@ -9,8 +9,10 @@ import {
 import { createEffectTaskTempPaths, cleanupEffectTaskTempPaths } from './temp-file-manager'
 import { destroyEffectRenderWindow, ensureEffectRenderWindow } from './render-window-manager'
 import { defaultSubtitleStyle } from '../../src/effect-engine/default-style'
+import { getSubtitleRenderFrameCount } from '../../src/effect-engine/shared/render-limits'
 import type {
   SubtitleAsset,
+  SubtitleAnimation,
   SubtitleRendererManifest,
   SubtitleStyleConfig,
 } from '../../src/effect-engine/shared/types'
@@ -40,9 +42,11 @@ export async function renderSubtitleFramesToPngSequence(params: {
   fps: number
   durationMs: number
   style?: Partial<SubtitleStyleConfig>
+  animation?: SubtitleAnimation
   onProgress?: (progress: number) => void
   abortSignal?: AbortSignal
 }): Promise<{ manifest: SubtitleRendererManifest; cleanup: () => void }> {
+  const totalFrames = getSubtitleRenderFrameCount(params.durationMs, params.fps)
   const taskId = createTaskId()
   const tempPaths = createEffectTaskTempPaths(taskId)
 
@@ -63,12 +67,13 @@ export async function renderSubtitleFramesToPngSequence(params: {
     },
     subtitleAsset: params.subtitleAsset,
     style,
+    animation: params.animation ?? 'none',
   }
 
   registerEffectExportTaskContext({
     task,
     tempPaths,
-    totalFrames: Math.max(1, Math.ceil((params.durationMs / 1000) * params.fps)),
+    totalFrames,
   })
 
   try {
@@ -81,7 +86,7 @@ export async function renderSubtitleFramesToPngSequence(params: {
       context: {
         task,
         tempPaths,
-        totalFrames: Math.max(1, Math.ceil((params.durationMs / 1000) * params.fps)),
+        totalFrames,
       },
       onProgress: params.onProgress,
       abortSignal: params.abortSignal,

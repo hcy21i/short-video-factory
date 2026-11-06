@@ -104,6 +104,7 @@ export async function renderVideo(
         fps: 30,
         durationMs,
         style: params.subtitleStyle,
+        animation: params.subtitleAnimation,
         abortSignal,
         onProgress: (progress) => {
           subtitleRenderProgress = progress

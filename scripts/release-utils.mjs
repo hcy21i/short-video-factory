@@ -1,9 +1,5 @@
 export function expectedInstallers(version) {
-  return [
-    `short-video-factory-${version}-win-x64-setup.exe`,
-    `short-video-factory-${version}-mac-universal-installer.dmg`,
-    `short-video-factory-${version}-linux-x86_64.AppImage`,
-  ]
+  return [`short-video-factory-${version}-win-x64-setup.exe`]
 }
 
 export function releaseNotes(changelog, tag) {

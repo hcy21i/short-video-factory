@@ -88,19 +88,6 @@ interface Window {
       hostExists: boolean
     }>
     getMetadataState: () => Promise<import('./metadata/types').MetadataState>
-    getTranscriptionConfig: () => Promise<import('./transcription/types').TranscriptionConfigView>
-    saveTranscriptionConfig: (
-      params: import('./transcription/types').SaveTranscriptionConfigInput,
-    ) => Promise<import('./transcription/types').TranscriptionConfigView>
-    selectTranscriptionMedia: () => Promise<
-      import('./transcription/types').SelectedTranscriptionMediaView | null
-    >
-    transcribeMedia: (
-      params: import('./transcription/types').TranscribeMediaInput,
-    ) => Promise<import('./transcription/types').TranscriptionResult>
-    saveTranscriptionSrt: (
-      params: import('./transcription/types').SaveSrtInput,
-    ) => Promise<string | null>
     onMetadataStateChanged: (
       listener: (state: import('./metadata/types').MetadataState) => void,
     ) => () => void

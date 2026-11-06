@@ -10,6 +10,7 @@ import {
 import type { CopywritingStatus, LlmConfig } from '@/lib/llm/types'
 import { normalizeBatchConfig, type BatchRunState } from '@/lib/batch'
 import type { MiniMaxApiRegion } from '~/electron/tts/types'
+import type { SubtitleAnimation } from '@/effect-engine/shared/types'
 
 export enum RenderStatus {
   None,
@@ -129,14 +130,23 @@ export const useAppStore = defineStore(
       subtitlesEnabled: true,
       exportSubtitles: false,
       subtitlePreset: '',
+      subtitleAnimation: 'none' as SubtitleAnimation,
     })
     const autoBatch = ref(false)
     const batchConfig = ref({ count: 10, onError: 'stop' as 'stop' | 'continue' })
     const batchProgress = ref<BatchRunState | null>(null)
     const renderStatus = ref(RenderStatus.None)
     const updateRenderConfig = (
-      newConfig: Omit<typeof renderConfig.value, 'subtitlesEnabled' | 'exportSubtitles' | 'subtitlePreset'> &
-        Partial<Pick<typeof renderConfig.value, 'subtitlesEnabled' | 'exportSubtitles' | 'subtitlePreset'>>,
+      newConfig: Omit<
+        typeof renderConfig.value,
+        'subtitlesEnabled' | 'exportSubtitles' | 'subtitlePreset' | 'subtitleAnimation'
+      > &
+        Partial<
+          Pick<
+            typeof renderConfig.value,
+            'subtitlesEnabled' | 'exportSubtitles' | 'subtitlePreset' | 'subtitleAnimation'
+          >
+        >,
     ) => {
       renderConfig.value = {
         ...newConfig,
@@ -144,6 +154,7 @@ export const useAppStore = defineStore(
         subtitlesEnabled: newConfig.subtitlesEnabled !== false,
         exportSubtitles: newConfig.exportSubtitles === true,
         subtitlePreset: newConfig.subtitlePreset ?? '',
+        subtitleAnimation: newConfig.subtitleAnimation ?? 'none',
       }
     }
     const updateRenderStatus = (newStatus: RenderStatus) => {

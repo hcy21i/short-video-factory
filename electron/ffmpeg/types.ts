@@ -1,4 +1,8 @@
-import type { SubtitleAsset, SubtitleStyleConfig } from '../../src/effect-engine/shared/types'
+import type {
+  SubtitleAnimation,
+  SubtitleAsset,
+  SubtitleStyleConfig,
+} from '../../src/effect-engine/shared/types'
 
 export interface AudioVolumeConfig {
   voiceVolume?: string // voice音量，如 "1.5"（倍数）或 "-3dB"（分贝）
@@ -14,6 +18,7 @@ export interface RenderVideoParams {
   subtitleText?: string
   subtitleAsset?: SubtitleAsset
   subtitleStyle?: Partial<SubtitleStyleConfig>
+  subtitleAnimation?: SubtitleAnimation
   subtitlesEnabled?: boolean
   exportSubtitles?: boolean
   outputSize: { width: number; height: number }

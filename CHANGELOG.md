@@ -4,30 +4,6 @@ All significant changes to this project will be recorded in this file.
 
 此项目的所有显著更改都将记录在此文件中。
 
-## [v1.8.0] - 2026-11-06
-
-<!-- i18n:en:start -->
-### Added
-
-- Add a subtitle transcription workspace for audio and video, with a configurable OpenAI-style Whisper endpoint, editable timestamped captions, and SRT export for the existing MCP video renderer.
-- Store the transcription API key through Electron safeStorage in the main process.
-
-### Notes
-
-- OpenAI has announced that `whisper-1` will be shut down on 2027-02-26. Configure another endpoint and model that returns `verbose_json` segment timestamps when migrating.
-<!-- i18n:en:end -->
-
-<!-- i18n:zh-CN:start -->
-### 新增
-
-- 增加音视频字幕转录工作区，可配置 OpenAI Whisper 兼容接口，逐条编辑带时间轴的字幕，并导出供现有 MCP 视频渲染工具使用的 SRT。
-- API Key 由 Electron 主进程通过 safeStorage 加密保存。
-
-### 说明
-
-- OpenAI 已公告 `whisper-1` 将于 2027-02-26 停止提供。迁移时可配置其他支持 `verbose_json` 分段时间戳的接口和模型。
-<!-- i18n:zh-CN:end -->
-
 ## [v1.7.0] - 2026-11-05
 
 <!-- i18n:en:start -->
